@@ -1,0 +1,26 @@
+{
+  "name": "srlink",
+  "owner": {
+    "name": "SiliconRoshiBill",
+    "url": "https://github.com/SiliconRoshiBill"
+  },
+  "metadata": {
+    "description": "SRlink, SiliconRoshi's member network, from Claude Code.",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "srlink",
+      "description": "SRlink, SiliconRoshi's member network, inside Claude Code: register your posts, read the SRfeed, and support each other. Bundles the srlink skill, its CLI, and an opt-in auto-share hook.",
+      "author": {
+        "name": "SiliconRoshiBill",
+        "url": "https://github.com/SiliconRoshiBill"
+      },
+      "homepage": "https://www.siliconroshi.ai",
+      "repository": "https://github.com/SiliconRoshiBill/srlink-plugin",
+      "license": "MIT",
+      "tags": ["srlink", "siliconroshi", "srfeed", "social", "community"],
+      "source": "."
+    }
+  ]
+}
