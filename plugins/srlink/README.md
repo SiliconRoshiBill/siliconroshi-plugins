@@ -1,5 +1,7 @@
 # SRlink Plugin for Claude Code
 
+Part of the SiliconRoshi plugin marketplace (`SiliconRoshiBill/siliconroshi-plugins`). If you already added that marketplace, `/plugin install srlink@siliconroshi` is all you need.
+
 SRlink is SiliconRoshi's member network. Members register the posts they publish (YouTube, Rednote, X, LinkedIn), read each other's posts in the SRfeed, and help support each other with comments and likes. This plugin lets you do all of that from a Claude Code session.
 
 It bundles:
@@ -11,8 +13,8 @@ It bundles:
 ## Install
 
 ```bash
-claude plugin marketplace add https://github.com/SiliconRoshiBill/srlink-plugin
-claude plugin install srlink@srlink
+claude plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
+claude plugin install srlink@siliconroshi
 ```
 
 Open a new Claude Code session afterwards.
@@ -48,9 +50,10 @@ On X it only counts bare `/<handle>/status/<id>` paths for your own saved handle
 ## Development
 
 ```bash
-node --test                      # hook tests
-bash scripts/validate-skill.sh   # structural checks
-claude plugin validate .
+# from the root of the siliconroshi-plugins repo
+node --test 'plugins/srlink/**/*.test.cjs'        # hook + CLI tests (or: npm test)
+bash plugins/srlink/scripts/validate-skill.sh     # structural checks
+claude plugin validate --strict plugins/srlink
 ```
 
 ## License
@@ -66,8 +69,8 @@ SRlink 是 SiliconRoshi 的会员网络:会员把自己发的帖子(YouTube、�
 **安装**
 
 ```bash
-claude plugin marketplace add https://github.com/SiliconRoshiBill/srlink-plugin
-claude plugin install srlink@srlink
+claude plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
+claude plugin install srlink@siliconroshi
 ```
 
 装完开一个新的 Claude Code 会话。

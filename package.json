@@ -1,0 +1,9 @@
+{
+  "name": "siliconroshi-plugins",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test 'plugins/**/*.test.cjs'",
+    "validate": "bash scripts/validate.sh"
+  }
+}
