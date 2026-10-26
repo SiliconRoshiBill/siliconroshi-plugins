@@ -24,7 +24,7 @@ echo "validating: srlink plugin"
 check "frontmatter: name"        grep -qE '^name: srlink$' "$skill"
 check "frontmatter: description" grep -qE '^description: ' "$skill"
 check "skill: plugin-root path"  grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs' "$skill"
-check "skill: auto-share opt-in" grep -qF 'srlink auto-share on' "$skill"
+check "skill: auto-share default on, documents off" grep -qF 'srlink auto-share off' "$skill"
 check "hook: uses plugin root"   grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/hook.cjs' hooks/hooks.json
 check "hook: off by default"     grep -qF 'cfg.autoShare !== true' skills/srlink/scripts/hook.cjs
 check "cli: production default"  grep -qF "'https://www.siliconroshi.ai'" skills/srlink/scripts/srlink.cjs
