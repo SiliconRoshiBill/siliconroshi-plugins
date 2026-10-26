@@ -50,7 +50,7 @@ bash scripts/validate.sh   # strict manifest checks, plugin lint, tests, secret/
 npm test                   # node tests for vendored plugins
 ```
 
-`heropedia` lives in its own repository and is referenced by a GitHub source. `srlink` is vendored under `plugins/srlink` (its earlier history is merged in).
+`heropedia` lives in its own repository and is referenced by an HTTPS git source (no SSH key needed). `srlink` is vendored under `plugins/srlink` (its earlier history is merged in).
 
 ## License
 

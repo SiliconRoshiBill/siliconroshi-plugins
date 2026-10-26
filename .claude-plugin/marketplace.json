@@ -11,8 +11,8 @@
     {
       "name": "heropedia",
       "source": {
-        "source": "github",
-        "repo": "SiliconRoshiBill/heropedia-plugin"
+        "source": "url",
+        "url": "https://github.com/SiliconRoshiBill/heropedia-plugin.git"
       },
       "description": "Consult 324+ hand-crafted expert personas (Warren Buffett, Steve Jobs, Charlie Munger, Linus Torvalds, and more) directly inside Claude Code. Bundles the Heropedia MCP server registration + a skill that enforces the fetch-canonical-prompt-before-answering workflow. Every hero is one 'ask <name> to...' away.",
       "version": "0.2.3",
