@@ -12,7 +12,7 @@
 //  Never blocks a tool; always exits 0.
 //
 //  Shipped as a plugin hook (hooks/hooks.json). Off until the user
-//  runs `srlink auto-share on`; `srlink auto-share off` stops it.
+//  is on by default once logged in; `srlink auto-share off` stops it.
 // ============================================================
 
 const fs = require('fs');
@@ -111,7 +111,10 @@ function saveSeen(dir, seen) {
 async function handle(event) {
   const srlink = require('./srlink.cjs');
   const cfg = srlink.loadConfig();
-  if (cfg.autoShare !== true) return null;
+  /* On by default (owner, 2026-10-25); `srlink auto-share off` stops it.
+   * Before the first login it stays silent instead of nagging. */
+  if (cfg.autoShare === false) return null;
+  if (!cfg.token && cfg.autoShare !== true) return null;
   const inputText = JSON.stringify(event.tool_input || {});
   /* Our own CLI prints links that are already on SRlink. */
   if (/srlink\.cjs|\/api\/srlink\//.test(inputText)) return null;

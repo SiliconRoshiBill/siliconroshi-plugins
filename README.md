@@ -6,7 +6,7 @@ It bundles:
 
 - **`srlink` skill**: log in, register your posts, read the SRfeed with comment drafts, and check which members supported your posts. Triggers on "SRlink", "SRfeed", "share to SRlink", "check comments", or right after you publish a post.
 - **`srlink` CLI** (`skills/srlink/scripts/srlink.cjs`, plain Node 18+, no dependencies): the skill calls it for you.
-- **Auto-share hook** (`hooks/hooks.json`): off until you turn it on. See below.
+- **Auto-share hook** (`hooks/hooks.json`): on by default once you log in. See below.
 
 ## Install
 
@@ -23,14 +23,14 @@ Ask Claude "log in to SRlink", or run the steps yourself (`<plugin>` is the inst
 
 1. `node <plugin>/skills/srlink/scripts/srlink.cjs login` prints a link and a code and opens your browser. Sign in at siliconroshi.ai and approve. A token is saved to `~/.srlink/config.json` (mode 600).
 2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>]` saves your own account names, so other members can verify your support.
-3. Optional: `srlink auto-share on` (see below).
+3. Auto-share is on by default; `srlink auto-share off` turns it off (see below).
 4. `srlink status` to confirm.
 
 Other commands: `share`, `feed`, `mine`, `mark`, `observed`, `logout`. `login --url <site>` points at a test server; the default is https://www.siliconroshi.ai.
 
 ## The auto-share hook
 
-The plugin registers a `PostToolUse` hook that runs after Bash and MCP tools (Claude in Chrome included). It does nothing until you run `srlink auto-share on`; `srlink auto-share off` stops it.
+The plugin registers a `PostToolUse` hook that runs after Bash and MCP tools (Claude in Chrome included). It is on by default once you are logged in (before that it stays silent); `srlink auto-share off` stops it and `srlink auto-share on` turns it back on.
 
 When on, it looks in the tool's output for a new post link (one that was not in the tool's input, so links you only opened are skipped) and:
 
@@ -76,12 +76,12 @@ claude plugin install srlink@srlink
 
 1. 对 Claude 说「登录 SRlink」,或运行 `srlink login`:终端显示链接和验证码,浏览器里登录 siliconroshi.ai 并点授权。令牌保存在 `~/.srlink/config.json`。
 2. `srlink handles --rednote <名字> --youtube @<名字>`:填你自己的账号名,方便其他会员核对你的支持。
-3. 可选:`srlink auto-share on` 打开自动登记。
+3. 自动登记默认打开;`srlink auto-share off` 可以关掉。
 4. `srlink status` 确认。
 
 **自动登记 hook**
 
-插件自带一个 PostToolUse hook,默认关闭,`srlink auto-share on` 才生效,`off` 关掉。打开后,工具输出里出现你刚发布的新帖子链接时,它会把帖子登记到 SRlink,或提醒 Claude 只在你本人刚发布时登记。它不会替你在任何平台发帖,也不会卡住任何工具。
+插件自带一个 PostToolUse hook,登录后默认打开,`srlink auto-share off` 关掉,`on` 重新打开。打开时,工具输出里出现你刚发布的新帖子链接时,它会把帖子登记到 SRlink,或提醒 Claude 只在你本人刚发布时登记。它不会替你在任何平台发帖,也不会卡住任何工具。
 
 **隐私**
 

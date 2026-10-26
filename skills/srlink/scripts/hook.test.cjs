@@ -50,7 +50,7 @@ test('detectPosts: bare status paths of other accounts, or with no X handle save
   assert.equal(detectPosts('', out).length, 0);
 });
 
-test('handle: stays silent until auto-share is on', async () => {
+test('handle: on by default once logged in; silent before login and after auto-share off', async () => {
   const fs = require('fs');
   const os = require('os');
   const path = require('path');
@@ -59,8 +59,10 @@ test('handle: stays silent until auto-share is on', async () => {
   for (const k of Object.keys(require.cache)) if (/srlink\.cjs$|hook\.cjs$/.test(k)) delete require.cache[k];
   const hook = require('./hook.cjs');
   const event = { tool_input: {}, tool_response: { stdout: 'published https://youtu.be/abcdefghijk' } };
-  assert.equal(await hook.handle(event), null);
+  assert.equal(await hook.handle(event), null);                       /* no config: silent */
   fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ autoShare: true }));
   assert.match(await hook.handle(event), /not logged in/);
+  fs.writeFileSync(path.join(home, 'config.json'), JSON.stringify({ token: 't', autoShare: false }));
+  assert.equal(await hook.handle(event), null);                       /* explicitly off */
   fs.rmSync(home, { recursive: true, force: true });
 });

@@ -10,7 +10,7 @@
 //    node srlink.cjs login [--url https://test-site] [--lang en] [--name "Bill's MacBook"]
 //    node srlink.cjs logout | status
 //    node srlink.cjs share --title T [--summary S] [--publish-at ISO] --link rednote=URL [--link youtube=URL ...]
-//    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default off)
+//    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME]
@@ -107,7 +107,7 @@ async function status() {
   if (!cfg.token) return `Not logged in (server would be ${serverUrl()}).`;
   const r = await api('GET', '/api/srlink/feed', null, cfg.token);
   if (r.status === 401) return 'Token no longer valid. Run login again.';
-  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === true ? 'on' : 'off'}.`;
+  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === false ? 'off' : 'on'}.`;
 }
 
 /* links: [{ platform, url }]; platform names may be aliases (rednote, twitter...).
@@ -170,7 +170,7 @@ async function mark(postId, action, on) {
 /* The plugin hook stays silent unless this is on. */
 function autoShare(mode) {
   if (mode !== 'on' && mode !== 'off') {
-    return `Auto-share is ${loadConfig().autoShare === true ? 'on' : 'off'}. Use: auto-share on|off`;
+    return `Auto-share is ${loadConfig().autoShare === false ? 'off' : 'on'}. Use: auto-share on|off`;
   }
   saveConfig({ ...loadConfig(), autoShare: mode === 'on' });
   return `Auto-share ${mode}.`;

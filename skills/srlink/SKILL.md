@@ -18,7 +18,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 
 1. `srlink login` — prints a link and a code and opens the browser; the user signs in to siliconroshi.ai and clicks 授权. (`--url <site>` logs in to a test site instead of production.)
 2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>]` — the user's own account names, so other members' monitoring can verify their support. Also editable on SRlink → 我的.
-3. Ask the user before `srlink auto-share on`: it turns on the plugin's PostToolUse hook, so posts the user publishes with any skill are registered automatically. The hook ships with the plugin but stays silent until this is on. `srlink auto-share off` turns it off again.
+3. Auto-share is on by default once the user is logged in: the plugin's PostToolUse hook registers posts the user publishes with any skill. Tell the user once that it is on and that `srlink auto-share off` turns it off.
 4. `srlink status` to confirm.
 
 ## 1. Publish
@@ -39,7 +39,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 - Same title within 7 days adds the platform to the existing card. Scheduled posts: pass `--publish-at`; SRfeed shows them from then.
 - Free users: 1 share a month (on `monthly_limit`, say so and mention 升级会员). Members: no limit.
 - Hook notes: "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published it, with the title just used; ignore links you only opened.
-- The hook (only when `srlink auto-share on`) runs after Bash and every MCP tool, Claude in Chrome included. On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
+- The hook (on by default; off after `srlink auto-share off`) runs after Bash and every MCP tool, Claude in Chrome included. On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
 
 ## 3. Comment on members' posts
 
