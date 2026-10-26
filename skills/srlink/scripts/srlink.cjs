@@ -9,7 +9,11 @@
 //  Usage:
 //    node srlink.cjs login [--url https://test-site] [--lang en] [--name "Bill's MacBook"]
 //    node srlink.cjs logout | status
-//    node srlink.cjs share --title T [--summary S] [--publish-at ISO] --link rednote=URL [--link youtube=URL ...]
+//    node srlink.cjs share --title T [--summary S] [--publish-at WHEN] --link rednote=URL [--link youtube=URL ...]
+//      --publish-at: ISO with an offset/Z is sent as-is; a bare
+//      "2026-11-01T19:00:00" (no offset) is read in YOUR OWN local
+//      timezone and converted to an absolute UTC instant before it
+//      is sent, so the server never re-interprets it as UTC.
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
@@ -36,6 +40,41 @@ const PLATFORM_ALIASES = {
   youtube: 'youtube', yt: 'youtube', linkedin: 'linkedin', x: 'x', twitter: 'x',
 };
 const platformKey = (p) => PLATFORM_ALIASES[String(p || '').toLowerCase()] || 'other';
+
+const HAS_OFFSET = /[Zz]|[+-]\d{2}:?\d{2}$/;
+
+/* A stored SQLite timestamp has no offset ('YYYY-MM-DD HH:MM:SS')
+ * and is always UTC; normalize it to something every Date parses
+ * as that same instant, regardless of this machine's timezone. */
+function toISO(s) {
+  if (!s) return s;
+  return HAS_OFFSET.test(s) ? s : `${s.includes('T') ? s : s.replace(' ', 'T')}Z`;
+}
+
+/* What the user reads: their own machine's timezone, never UTC
+ * (see SKILL.md). `timeZoneName: 'short'` prints EST/PST/... so a
+ * time is never ambiguous. */
+function localTime(s) {
+  const d = new Date(toISO(s));
+  if (isNaN(+d)) return s;
+  return new Intl.DateTimeFormat(undefined, {
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', timeZoneName: 'short',
+  }).format(d);
+}
+
+/* A bare "YYYY-MM-DDTHH:mm:ss" (no offset) is, by spec, parsed as
+ * local time by Date() -- i.e. THIS machine's local time, which is
+ * the caller's own. Convert it to an absolute UTC instant before it
+ * crosses the wire: the server has no notion of the caller's zone
+ * and would otherwise read the same bare string as UTC. Anything
+ * that already carries an offset/Z is left untouched. */
+function toAbsoluteISO(raw) {
+  if (!raw) return raw;
+  if (HAS_OFFSET.test(raw)) return raw;
+  const d = new Date(raw);
+  return isNaN(+d) ? raw : d.toISOString();
+}
 
 function loadConfig() {
   try {
@@ -117,7 +156,7 @@ async function share({ title, summary, links, publishAt }) {
     title: String(title || '').trim().slice(0, 150),
     summary: summary ? String(summary).trim().slice(0, 600) : '',
     links: (links || []).map((l) => ({ platform: platformKey(l.platform), url: l.url })),
-    publish_at: publishAt || undefined,
+    publish_at: toAbsoluteISO(publishAt) || undefined,
   };
   const r = await api('POST', '/api/srlink/posts', body, authed());
   if (!r.ok) throw new Error(`share failed: ${r.status} ${r.data.error || ''}`);
@@ -199,15 +238,24 @@ async function main() {
     return console.log(JSON.stringify(await share({ title: f.title, summary: f.summary, links, publishAt: f['publish-at'] })));
   }
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
-  if (cmd === 'feed') return console.log(JSON.stringify(await feed(), null, 2));
-  if (cmd === 'mine') return console.log(JSON.stringify(await mine(), null, 2));
+  /* `created_at` stays ISO (machine-readable); `created_at_local` is
+   * added for a human reading the terminal, in THEIR OWN timezone. */
+  if (cmd === 'feed') {
+    const d = await feed();
+    const posts = d.posts.map((p) => ({ ...p, created_at_local: localTime(p.created_at) }));
+    return console.log(JSON.stringify({ ...d, posts }, null, 2));
+  }
+  if (cmd === 'mine') {
+    const posts = (await mine()).map((p) => ({ ...p, created_at_local: localTime(p.created_at) }));
+    return console.log(JSON.stringify(posts, null, 2));
+  }
   if (cmd === 'handles') return console.log(JSON.stringify(await handles(f)));
   if (cmd === 'observed') return console.log(JSON.stringify(await observed(f.url, f.platform, f.comment, f.like)));
   if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true)));
   throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share');
 }
 
-module.exports = { share, feed, platformKey, loadConfig, DIR };
+module.exports = { share, feed, platformKey, loadConfig, DIR, toISO, localTime, toAbsoluteISO };
 
 if (require.main === module) {
   main().catch((err) => {

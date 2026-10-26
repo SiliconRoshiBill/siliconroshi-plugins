@@ -13,6 +13,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 - Every publish needs an explicit "发布" from the user for that one post. Show the exact final text, title, platform and media first; re-show after any edit. No batch publishing, no unattended publishing.
 - Comments and likes: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. Like only when the user approves the like for that post (default yes, shown next to the comment preview); never like comments; skip if already liked.
 - Share only the user's own posts to SRlink. Never print the token or `~/.srlink/config.json`.
+- Dates and times: when telling the user a date or time, use the local value the CLI printed (`created_at_local` in `feed`/`mine`, or `status`'s plain text) — never UTC and never a raw ISO string. A `--publish-at` with no timezone offset is read as the user's own local time and sent to the server as an absolute UTC instant.
 
 ## Setup (once per computer)
 
@@ -35,8 +36,8 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 
 ## 2. Register on SRlink
 
-`srlink share --title "<title>" [--summary "<one line>"] [--publish-at <ISO>] --link rednote=<url> [--link youtube=<url> ...]`
-- Same title within 7 days adds the platform to the existing card. Scheduled posts: pass `--publish-at`; SRfeed shows them from then.
+`srlink share --title "<title>" [--summary "<one line>"] [--publish-at <WHEN>] --link rednote=<url> [--link youtube=<url> ...]`
+- Same title within 7 days adds the platform to the existing card. Scheduled posts: pass `--publish-at`; SRfeed shows them from then. `<WHEN>` can be plain local time ("2026-11-01T19:00:00", no offset) — read as the user's own timezone and converted to UTC before sending — or an ISO string that already carries an offset/`Z`.
 - Free users: 1 share a month (on `monthly_limit`, say so and mention 升级会员). Members: no limit.
 - Hook notes: "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published it, with the title just used; ignore links you only opened.
 - The hook (on by default; off after `srlink auto-share off`) runs after Bash and every MCP tool, Claude in Chrome included. On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
