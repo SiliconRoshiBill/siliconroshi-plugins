@@ -1,7 +1,7 @@
 // ============================================================
 //  scan.cjs -- find my posts in my own Claude Code sessions.
 //
-//    node scan.cjs              scan now (also part of the hourly run)
+//    node scan.cjs              scan now (also part of the background run)
 //    node scan.cjs on|off       opt in / out (asked once at setup)
 //    node scan.cjs list         candidates still waiting for Claude
 //    node scan.cjs mark <url> registered|not-mine|old

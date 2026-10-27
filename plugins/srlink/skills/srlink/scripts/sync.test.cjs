@@ -50,3 +50,12 @@ test('match similarity: a lightly edited draft still matches; a different commen
   assert.ok(similarity('拿原图和说明书对一对，这个习惯我也要养成。', '拿原图和说明书对一对,这个习惯我要养成') >= 0.8);
   assert.ok(similarity('拿原图和说明书对一对，这个习惯我也要养成。', '你最想用 AI 干的一件事是什么？') < 0.8);
 });
+
+const { plistXml, schedule } = require('./sync.cjs');
+
+test('schedule: launchd interval follows the hours; bad hours are refused before anything changes', () => {
+  assert.ok(plistXml(3).includes('<integer>10800</integer>'));
+  assert.ok(plistXml(1).includes('<integer>3600</integer>'));
+  for (const bad of ['0', '25', '1.5', 'abc']) assert.match(schedule('on', bad), /1 to 24/);
+  assert.match(schedule('maybe'), /^Use:/);
+});

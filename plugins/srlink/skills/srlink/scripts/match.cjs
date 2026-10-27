@@ -1,7 +1,7 @@
 // ============================================================
 //  match.cjs -- fill in a reader's missing handle from their comment.
 //
-//    node match.cjs                 check now (also part of the hourly run)
+//    node match.cjs                 check now (also part of the background run)
 //    node match.cjs claim <postId> <personId> <platform> <handle>
 //
 //  SRlink keeps the comment a reader took from the feed. For my posts,

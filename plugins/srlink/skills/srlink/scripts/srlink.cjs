@@ -21,7 +21,7 @@
 //    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...] [--like HANDLE ...]
 //    node srlink.cjs mark <postId> commented|liked|skipped [--off]
 //    node srlink.cjs sync                        register my new YouTube videos now
-//    node srlink.cjs schedule on|off             ...and every hour on this computer
+//    node srlink.cjs schedule on [H]|off|status  ...and every H hours (1-24) here
 //    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
 //                                                my posts found in my Claude sessions
 //    node srlink.cjs match                       fill readers' missing handles from their comments
@@ -152,7 +152,8 @@ async function status() {
   if (!cfg.token) return `Not logged in (server would be ${serverUrl()}).`;
   const r = await api('GET', '/api/srlink/feed', null, cfg.token);
   if (r.status === 401) return 'Token no longer valid. Run login again.';
-  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === false ? 'off' : 'on'}.`;
+  const hours = require('./sync.cjs').scheduledHours();
+  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === false ? 'off' : 'on'}; background check ${hours ? (hours === 1 ? 'every hour' : `every ${hours} hours`) : 'off'}; session scan ${cfg.scanSessions ? 'on' : 'off'}.`;
 }
 
 /* links: [{ platform, url }]; platform names may be aliases (rednote, twitter...).
