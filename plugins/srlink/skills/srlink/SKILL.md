@@ -46,7 +46,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 
 ## 3. Comment on members' posts
 
-1. `srlink feed` → posts of the last 10 days with `links`, `drafts`, `commented`, `liked`, `mine`.
+1. `srlink feed` → posts of the last 5 days with `links`, `drafts`, `liked`, `mine` (posts you already commented on are left out).
 2. Show the user posts that are not `mine` and not commented, with their drafts. Each draft is one or two sentences.
    Posts that are `mine` carry drafts too: a pinned first comment for the author (a question that invites replies, or one tip). Offer them right after a publish; never `mark` your own post.
 3. The user picks or edits a draft and posts it (or asks you to post that one comment, per the ground rules).
