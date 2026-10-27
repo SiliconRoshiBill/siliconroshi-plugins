@@ -178,7 +178,7 @@ async function feed() {
 
 async function mine() {
   const d = await feed();
-  return d.posts.filter((p) => p.mine).map(({ id, title, links, created_at }) => ({ id, title, links, created_at }));
+  return d.posts.filter((p) => p.mine).map(({ id, title, links, created_at, posted_at }) => ({ id, title, links, created_at, posted_at }));
 }
 
 async function handles(f) {
@@ -257,15 +257,16 @@ async function main() {
     return console.log(JSON.stringify(await share({ title: f.title, summary: f.summary, links, publishAt: f['publish-at'] })));
   }
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
-  /* `created_at` stays ISO (machine-readable); `created_at_local` is
-   * added for a human reading the terminal, in THEIR OWN timezone. */
+  /* `posted_at` (when the post went public on its platform; the
+   * registration time when unknown) stays as the server sent it;
+   * `posted_at_local` is for a human, in THEIR OWN timezone. */
   if (cmd === 'feed') {
     const d = await feed();
-    const posts = d.posts.map((p) => ({ ...p, created_at_local: localTime(p.created_at) }));
+    const posts = d.posts.map((p) => ({ ...p, posted_at_local: localTime(p.posted_at || p.created_at) }));
     return console.log(JSON.stringify({ ...d, posts }, null, 2));
   }
   if (cmd === 'mine') {
-    const posts = (await mine()).map((p) => ({ ...p, created_at_local: localTime(p.created_at) }));
+    const posts = (await mine()).map((p) => ({ ...p, posted_at_local: localTime(p.posted_at || p.created_at) }));
     return console.log(JSON.stringify(posts, null, 2));
   }
   if (cmd === 'handles') return console.log(JSON.stringify(await handles(f)));
