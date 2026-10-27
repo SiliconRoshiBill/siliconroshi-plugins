@@ -36,7 +36,9 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 
 ## 2. Register on SRlink
 
-`srlink share --title "<title>" [--summary "<one line>"] [--publish-at <WHEN>] --link rednote=<url> [--link youtube=<url> ...]`
+`srlink share --title "<title>" --summary "<3-5 sentences>" [--publish-at <WHEN>] --link rednote=<url> [--link youtube=<url> ...]`
+- Summary: always 3-5 sentences, written from the post's own text (description, caption, script): what it covers, who it is for, what a reader takes away. Never invent facts that are not in the post. Other members' AI comment drafts are written from it.
+- Rednote links: use the note's share link (App: 分享 → 复制链接, an `xhslink.com/...` link) or the note URL with its `xsec_token`. A bare `xiaohongshu.com/explore/<id>` is blocked for other viewers, so do not register it.
 - Same title within 7 days adds the platform to the existing card. Scheduled posts: pass `--publish-at`; SRfeed shows them from then. `<WHEN>` can be plain local time ("2026-11-01T19:00:00", no offset) — read as the user's own timezone and converted to UTC before sending — or an ISO string that already carries an offset/`Z`.
 - Free users: 1 share a month (on `monthly_limit`, say so and mention 升级会员). Members: no limit.
 - Hook notes: "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published it, with the title just used; ignore links you only opened.
@@ -45,7 +47,8 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 ## 3. Comment on members' posts
 
 1. `srlink feed` → posts of the last 10 days with `links`, `drafts`, `commented`, `liked`, `mine`.
-2. Show the user posts that are not `mine` and not commented, with their drafts.
+2. Show the user posts that are not `mine` and not commented, with their drafts. Each draft is one or two sentences.
+   Posts that are `mine` carry drafts too: a pinned first comment for the author (a question that invites replies, or one tip). Offer them right after a publish; never `mark` your own post.
 3. The user picks or edits a draft and posts it (or asks you to post that one comment, per the ground rules).
 4. After they confirm: `srlink mark <postId> commented` / `liked`; `mark <postId> skipped` hides an irrelevant post.
 

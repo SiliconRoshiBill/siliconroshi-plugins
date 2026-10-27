@@ -153,7 +153,7 @@ async function handle(event) {
     notes.push(
       `New post link(s): ${ask.map((p) => `${p.platform} ${p.url}`).join('; ')}. ` +
       'ONLY if the user just published this post themselves (not someone else\'s post you opened), share it to SRlink: ' +
-      `node "${cli}" share --title "<the post title>" [--summary "<one line>"] [--publish-at <ISO if scheduled>] --link <platform>=<url>. ` +
+      `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" [--publish-at <ISO if scheduled>] --link <platform>=<url>. ` +
       'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.',
     );
   }
