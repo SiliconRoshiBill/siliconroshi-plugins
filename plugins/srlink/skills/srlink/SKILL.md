@@ -20,7 +20,8 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 1. `srlink login` — prints a link and a code and opens the browser; the user signs in to siliconroshi.ai and clicks 授权. (`--url <site>` logs in to a test site instead of production.)
 2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>]` — the user's own account names, so other members' monitoring can verify their support. Also editable on SRlink → 我的.
 3. Auto-share is on by default once the user is logged in: the plugin's PostToolUse hook registers posts the user publishes with any skill. Tell the user once that it is on and that `srlink auto-share off` turns it off.
-4. `srlink status` to confirm.
+4. Ask the user once: 「要每小时自动检查你的 YouTube 新视频，直接登记到 SRlink 吗？」 On yes: `srlink schedule on` (macOS launchd / Linux crontab; `srlink schedule off` stops it). It only reads the channel's public feed.
+5. `srlink status` to confirm.
 
 ## 1. Publish
 
@@ -46,7 +47,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 
 ## 3. Comment on members' posts
 
-1. `srlink feed` → posts of the last 5 days with `links`, `drafts`, `liked`, `mine` (posts you already commented on are left out).
+1. `srlink feed` → the 10 newest posts you have not commented on, with `links`, `drafts`, `liked`, `mine`.
 2. Show the user posts that are not `mine` and not commented, with their drafts. Each draft is one or two sentences.
    Posts that are `mine` carry drafts too: a pinned first comment for the author (a question that invites replies, or one tip). Offer them right after a publish; never `mark` your own post.
 3. The user picks or edits a draft and posts it (or asks you to post that one comment, per the ground rules).
@@ -61,3 +62,8 @@ Run when the user asks ("check comments", "看看谁支持了我"), or daily if 
 4. Tell the user who was verified (`matched`) and how many other commenters there were. Suggest replies to new comments if they want.
 
 Privacy: the server keeps only commenters who are SRlink members (matched by their account names); everyone else is counted and dropped. Do not keep comment text or other people's names anywhere else.
+
+## 5. My new posts (automatic for YouTube)
+
+- `srlink sync` registers the newest (up to 10, last 30 days) videos of the user's YouTube channel that SRlink has not seen: title without hashtags, a 3-5 sentence summary from the description, the YouTube publish time. `srlink schedule on` runs it every hour. A video already registered, or one the user deleted on SRlink, is never registered again.
+- Rednote, LinkedIn and X have no public feed. When the user asks (「同步一下我的帖子」), open their profile in Chrome, take the newest posts, and register the ones not in `srlink mine` with `srlink share` (Rednote: the Copy Link share URL, see section 2).

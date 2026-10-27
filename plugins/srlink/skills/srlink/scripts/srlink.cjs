@@ -20,6 +20,8 @@
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME]
 //    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...] [--like HANDLE ...]
 //    node srlink.cjs mark <postId> commented|liked|skipped [--off]
+//    node srlink.cjs sync                        register my new YouTube videos now
+//    node srlink.cjs schedule on|off             ...and every hour on this computer
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -188,6 +190,11 @@ async function handles(f) {
   return r.data.handles;
 }
 
+/* The saved handles, asking the server only when none are cached. */
+async function handlesCached() {
+  return loadConfig().handles || handles({});
+}
+
 /* Who commented on / liked one of my posts, as read on the platform.
  * The server keeps only matches to SRlink members. */
 async function observed(url, platform, comments, likes) {
@@ -252,10 +259,12 @@ async function main() {
   if (cmd === 'handles') return console.log(JSON.stringify(await handles(f)));
   if (cmd === 'observed') return console.log(JSON.stringify(await observed(f.url, f.platform, f.comment, f.like)));
   if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true)));
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share');
+  if (cmd === 'sync') return require('./sync.cjs').run(rest);
+  if (cmd === 'schedule') return require('./sync.cjs').run(['schedule', ...rest]);
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule');
 }
 
-module.exports = { share, feed, platformKey, loadConfig, DIR, toISO, localTime, toAbsoluteISO };
+module.exports = { share, feed, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
 
 if (require.main === module) {
   main().catch((err) => {
