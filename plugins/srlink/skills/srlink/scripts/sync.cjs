@@ -172,7 +172,7 @@ async function run(argv) {
   if (!argv.includes('--quiet') || !loadConfig().scanSessions) return;
   try {
     const s = await require('./scan.cjs').scan();
-    if (s.added?.length) console.log(`${stamp()} scan ${JSON.stringify(s)}`);
+    if (s.added?.length || s.retryLater) console.log(`${stamp()} scan ${JSON.stringify(s)}`);
   } catch (e) {
     console.error(`${stamp()} scan failed: ${e.message}`);
     process.exitCode = 1;

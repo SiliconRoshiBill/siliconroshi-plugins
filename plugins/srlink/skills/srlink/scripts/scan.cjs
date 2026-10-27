@@ -112,6 +112,7 @@ async function scan() {
   const have = new Set(fresh.size ? await known([...fresh.values()].map((l) => l.url)) : []);
   const handle = (await handlesCached()).youtube;
   const added = [];
+  const failed = [];
   const tooOld = (iso) => iso && Date.parse(iso) < Date.now() - MAX_AGE_DAYS * 86400000;
   for (const [key, { url, platform }] of fresh) {
     const entry = (status) => { candidates[key] = { url, platform, status, seen: started }; };
@@ -120,14 +121,17 @@ async function scan() {
     const v = handle ? await youtubeIfMine(url, handle).catch(() => null) : null;
     if (!v) { entry('not-mine'); continue; }
     if (tooOld(v.published)) { entry('old'); continue; }
+    /* A failed share (rate limit, network) leaves no record, so the
+     * next run tries this video again; the rest of the scan goes on. */
     const r = await share({ title: v.title, summary: summaryOf(v.description), publishAt: v.published || undefined,
-      links: [{ platform: 'youtube', url: `https://www.youtube.com/watch?v=${v.id}` }] });
+      links: [{ platform: 'youtube', url: `https://www.youtube.com/watch?v=${v.id}` }] }).catch((e) => ({ error: e.message }));
+    if (r.error) { failed.push(r.error); continue; }
     entry('registered');
     if (!r.existing) added.push({ id: r.id, title: v.title });
   }
   saveCandidates(candidates);
   saveConfig({ ...loadConfig(), lastScan: started });
-  return { scanned: fresh.size, added, pending: pending().length };
+  return { scanned: fresh.size, added, pending: pending().length, ...(failed.length ? { retryLater: failed.length, error: failed[0] } : {}) };
 }
 
 const pending = () => Object.values(loadCandidates()).filter((c) => c.status === 'pending')
