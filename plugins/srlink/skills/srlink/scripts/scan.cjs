@@ -25,7 +25,9 @@ const { cleanTitle, summaryOf } = require('./sync.cjs');
 
 const PROJECTS = path.join(os.homedir(), '.claude', 'projects');
 const CANDIDATES = path.join(DIR, 'candidates.json');
-const FIRST_SCAN_DAYS = 30;
+/* The first scan looks back one day only (Bill, 2026-10-27); after
+ * that each run reads what changed since the last one. */
+const FIRST_SCAN_HOURS = 24;
 /* Only posts published in the feed's window are worth registering. */
 const MAX_AGE_DAYS = 30;
 const UA = { 'user-agent': 'Mozilla/5.0 (srlink-scan)' };
@@ -97,7 +99,7 @@ async function youtubeIfMine(url, handle) {
 async function scan() {
   const cfg = loadConfig();
   if (!cfg.scanSessions) return { skipped: 'session scan is off (srlink scan on)' };
-  const since = cfg.lastScan ? Date.parse(cfg.lastScan) : Date.now() - FIRST_SCAN_DAYS * 86400000;
+  const since = cfg.lastScan ? Date.parse(cfg.lastScan) : Date.now() - FIRST_SCAN_HOURS * 3600000;
   const started = new Date().toISOString();
   const candidates = loadCandidates();
   const fresh = new Map();
