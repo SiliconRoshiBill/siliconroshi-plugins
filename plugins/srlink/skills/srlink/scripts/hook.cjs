@@ -1,5 +1,6 @@
 // ============================================================
-//  SRlink PostToolUse hook for Claude Code.
+//  SRlink post-tool hook: PostToolUse in Claude Code and Codex,
+//  AfterTool in Gemini CLI (same stdin fields, same JSON reply).
 //
 //  After any Bash or MCP tool, whatever the posting skill is called
 //  (ytupload, someone's own uploader, Claude in Chrome...), look in
@@ -7,7 +8,7 @@
 //  - Structured record next to the link (JSON in the output, or a
 //    .json file the output names) with a title: share to SRlink
 //    directly, scheduled time included.
-//  - A bare link: tell Claude, which knows the title, to share it,
+//  - A bare link: tell the agent, which knows the title, to share it,
 //    but only if the user just published it.
 //  Never blocks a tool; always exits 0.
 //
@@ -147,7 +148,7 @@ async function handle(event) {
   try {
     const mine = await srlink.feed();
     known = new Set(mine.posts.filter((x) => x.mine).flatMap((x) => x.links.map((l) => l.url)));
-  } catch { /* offline: fall through and let Claude judge */ }
+  } catch { /* offline: fall through and let the agent judge */ }
   posts.splice(0, posts.length, ...posts.filter((p) => !known.has(p.url)));
   if (!posts.length) return null;
 
@@ -185,9 +186,12 @@ if (require.main === module) {
   process.stdin.on('data', (c) => { raw += c; });
   process.stdin.on('end', async () => {
     try {
-      const note = await handle(JSON.parse(raw || '{}'));
+      const event = JSON.parse(raw || '{}');
+      const note = await handle(event);
       if (note) {
-        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName: 'PostToolUse', additionalContext: note } }));
+        /* PostToolUse (Claude Code, Codex) or AfterTool (Gemini CLI). */
+        const hookEventName = event.hook_event_name || 'PostToolUse';
+        process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName, additionalContext: note } }));
       }
     } catch { /* a broken hook must never break the user's tool */ }
     process.exit(0);

@@ -1,6 +1,6 @@
-# SiliconRoshi Plugins for Claude Code
+# SiliconRoshi Plugins
 
-One Claude Code plugin marketplace for every SiliconRoshi plugin. Add it once, then install any plugin from it by name.
+One plugin marketplace for every SiliconRoshi plugin. Add it once, then install any plugin from it by name. It works in Claude Code and Codex; `srlink` also installs in Gemini CLI.
 
 Site: https://www.siliconroshi.ai
 
@@ -24,6 +24,25 @@ claude plugin install srlink@siliconroshi
 
 Install only the plugins you want. Open a new Claude Code session afterwards.
 
+### Codex
+
+Codex reads this same marketplace:
+
+```bash
+codex plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
+codex plugin add srlink@siliconroshi
+```
+
+Open a new Codex session afterwards.
+
+### Gemini CLI (srlink)
+
+```bash
+gemini extensions install https://github.com/SiliconRoshiBill/siliconroshi-plugins
+```
+
+This installs the `srlink` extension (`gemini-extension.json`, `hooks/` and `skills/` at the repo root). Open a new Gemini CLI session afterwards.
+
 ## Plugins
 
 | Plugin | What it does | Source |
@@ -37,7 +56,7 @@ Install only the plugins you want. Open a new Claude Code session afterwards.
 /plugin marketplace update siliconroshi
 ```
 
-Terminal: `claude plugin marketplace update siliconroshi`, then `claude plugin update <name>@siliconroshi`.
+Terminal: `claude plugin marketplace update siliconroshi`, then `claude plugin update <name>@siliconroshi`. Codex: `codex plugin marketplace upgrade siliconroshi`. Gemini CLI: `gemini extensions update srlink`.
 
 ## Already using Heropedia?
 
@@ -52,49 +71,8 @@ npm test                   # node tests for vendored plugins
 
 `heropedia` lives in its own repository and is referenced by an HTTPS git source (no SSH key needed). `srlink` is vendored under `plugins/srlink` (its earlier history is merged in).
 
+The Gemini CLI extension at the repo root carries a copy of `plugins/srlink/skills/srlink`. After changing the skill, run `bash scripts/sync-gemini.sh`; `validate.sh` fails while the copies differ.
+
 ## License
 
 MIT
-
----
-
-## 中文
-
-这是 SiliconRoshi 所有 Claude Code 插件的统一插件市场。加一次市场,以后装哪个插件都只要一行。
-
-**安装**
-
-在 Claude Code 会话里:
-
-```
-/plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
-/plugin install heropedia@siliconroshi
-/plugin install srlink@siliconroshi
-```
-
-或在终端里:
-
-```bash
-claude plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
-claude plugin install heropedia@siliconroshi
-claude plugin install srlink@siliconroshi
-```
-
-需要哪个装哪个。装完开一个新的 Claude Code 会话。
-
-**插件**
-
-| 插件 | 用途 |
-| --- | --- |
-| `heropedia` | 通过 Heropedia MCP 服务器,请 324 位以上的专家人物(巴菲特、乔布斯、芒格……)当参谋。 |
-| `srlink` | SRlink,SiliconRoshi 的会员网络:登记你发的帖子,看 SRfeed,看谁支持了你。 |
-
-**更新**
-
-```
-/plugin marketplace update siliconroshi
-```
-
-**已经装过 Heropedia?**
-
-从 Heropedia 自己的市场装的(`heropedia@heropedia`)照常能用,那个市场继续保留。想统一管理可以改装 `heropedia@siliconroshi`;两个是同一个插件,只启用其中一个即可。

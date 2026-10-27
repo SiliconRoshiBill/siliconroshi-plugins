@@ -1,6 +1,6 @@
 {
   "name": "srlink",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "description": "SRlink, SiliconRoshi's member network, inside Claude Code. Log in once, register your published posts, read the SRfeed with comment drafts, and see which members supported your posts. Bundles the srlink skill, its CLI, and an opt-in PostToolUse hook that registers posts you publish.",
   "author": {
     "name": "SiliconRoshiBill",

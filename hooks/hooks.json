@@ -1,0 +1,29 @@
+{
+  "hooks": {
+    "AfterTool": [
+      {
+        "matcher": "run_shell_command|.*__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "name": "srlink-auto-share",
+            "command": "node \"${extensionPath}/skills/srlink/scripts/hook.cjs\"",
+            "timeout": 30000
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "name": "srlink-session-start",
+            "command": "node \"${extensionPath}/skills/srlink/scripts/session-start.cjs\"",
+            "timeout": 15000
+          }
+        ]
+      }
+    ]
+  }
+}

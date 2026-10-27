@@ -95,22 +95,32 @@ async function syncYouTube() {
 /* ------------------------------------------------------------
  *  schedule on [H] | off | status -- every H hours (1-24) on this
  *  computer; H is kept in the config as scheduleHours. The launcher
- *  finds the newest installed plugin version each run, so plugin
- *  updates need no re-install.
+ *  finds the newest installed copy each run (Claude Code, Codex or
+ *  Gemini CLI), so plugin updates need no re-install.
  * ------------------------------------------------------------ */
 const LABEL = 'ai.siliconroshi.srlink-sync';
 const PLIST = path.join(os.homedir(), 'Library', 'LaunchAgents', `${LABEL}.plist`);
 const LAUNCHER = path.join(DIR, 'run-sync.cjs');
 const LOG = path.join(DIR, 'sync.log');
 
-const LAUNCHER_SRC = `// Written by \`srlink schedule on\`. Runs the newest installed srlink sync.cjs.
-const fs = require('fs'), path = require('path');
-const root = path.join(require('os').homedir(), '.claude/plugins/cache/siliconroshi/srlink');
+const LAUNCHER_SRC = `// Written by \`srlink schedule on\`. Runs the newest installed srlink sync.cjs,
+// whichever agent installed it (Claude Code, Codex, Gemini CLI).
+const fs = require('fs'), path = require('path'), home = require('os').homedir();
+const SCRIPT = 'skills/srlink/scripts/sync.cjs';
 const num = (v) => v.split('.').map(Number);
 const newer = (a, b) => { const x = num(a), y = num(b); for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] - y[i]; return 0; };
-const versions = fs.existsSync(root) ? fs.readdirSync(root).filter((v) => /^\\d+\\.\\d+\\.\\d+$/.test(v)).sort(newer) : [];
-const pick = versions.length ? path.join(root, versions.pop(), 'skills/srlink/scripts/sync.cjs') : ${JSON.stringify(__filename)};
-require(pick).run(['--quiet']);
+const newest = (root) => {
+  const v = fs.existsSync(root) ? fs.readdirSync(root).filter((d) => /^\\d+\\.\\d+\\.\\d+$/.test(d)).sort(newer).pop() : null;
+  return v ? { version: v, file: path.join(root, v, SCRIPT) } : null;
+};
+const gemini = path.join(home, '.gemini/extensions/srlink');
+const geminiVersion = (() => { try { return JSON.parse(fs.readFileSync(path.join(gemini, 'gemini-extension.json'), 'utf8')).version; } catch { return null; } })();
+const found = [
+  newest(path.join(home, '.claude/plugins/cache/siliconroshi/srlink')),
+  newest(path.join(home, '.codex/plugins/cache/siliconroshi/srlink')),
+  geminiVersion && { version: geminiVersion, file: path.join(gemini, SCRIPT) },
+].filter((c) => c && fs.existsSync(c.file)).sort((a, b) => newer(a.version, b.version));
+require(found.length ? found.pop().file : ${JSON.stringify(__filename)}).run(['--quiet']);
 `;
 
 function plistXml(hours) {
@@ -202,6 +212,6 @@ async function run(argv) {
   }
 }
 
-module.exports = { parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
+module.exports = { LAUNCHER_SRC, parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
 
 if (require.main === module) run(process.argv.slice(2));

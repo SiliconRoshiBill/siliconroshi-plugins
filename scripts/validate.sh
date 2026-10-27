@@ -7,6 +7,7 @@
 #   3. each vendored plugin's own structural lint, if it ships one
 #   4. node tests for every vendored plugin
 #   5. no personal paths, no user names, no token-like strings
+#   6. the Gemini CLI extension (repo root) matches plugins/srlink
 #
 # Remote plugins (heropedia) are validated in their own repos.
 #
@@ -35,6 +36,9 @@ for dir in plugins/*/; do
   lint="$dir/scripts/validate-skill.sh"
   [ -f "$lint" ] && check "$name: structural lint" bash "$lint"
 done
+check "gemini: skill copy matches plugin" diff -r plugins/srlink/skills/srlink skills/srlink
+check "gemini: version matches plugin"   node -e "process.exit(require('./gemini-extension.json').version===require('./plugins/srlink/.claude-plugin/plugin.json').version?0:1)"
+check "gemini: extension manifest"       gemini extensions validate .
 check "node tests"               node --test 'plugins/**/*.test.cjs'
 check "no personal paths"        absent '/U[s]ers/|/h[o]me/[a-z]'
 check "no personal user names"   absent 'b[i]llzwu'

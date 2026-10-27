@@ -1,5 +1,5 @@
 // ============================================================
-//  srlink — SRlink from Claude Code.
+//  srlink — SRlink from Claude Code, Codex or Gemini CLI.
 //
 //  Login works like `wrangler login`: the terminal shows a code
 //  and a link; you approve in the browser; a token is saved to
@@ -119,7 +119,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function login(lang, name, url) {
   const base = trimUrl(url || process.env.SRLINK_URL || PRODUCTION);
-  const start = await api('POST', '/api/srlink/device/start', { lang, client_name: name || `Claude Code on ${os.hostname()}` }, null, base);
+  const start = await api('POST', '/api/srlink/device/start', { lang, client_name: name || `${agentName()} on ${os.hostname()}` }, null, base);
   if (!start.ok) throw new Error(`login start failed: ${start.status} ${JSON.stringify(start.data)}`);
   const s = start.data;
   console.log(`\nOpen this link and approve:\n  ${s.verification_uri_complete}\n\nCode: ${s.user_code}\n`);
@@ -145,6 +145,14 @@ async function logout() {
   const { token, base, saved_at, ...keep } = cfg;
   if (Object.keys(keep).length) saveConfig(keep); else fs.rmSync(CONFIG, { force: true });
   return 'Logged out.';
+}
+
+/* The device list on SRlink shows which agent logged in. */
+function agentName() {
+  if (process.env.CLAUDECODE) return 'Claude Code';
+  if (process.env.GEMINI_CLI) return 'Gemini CLI';
+  if (Object.keys(process.env).some((k) => k.startsWith('CODEX_'))) return 'Codex';
+  return 'SRlink plugin';
 }
 
 async function status() {

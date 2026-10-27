@@ -23,7 +23,8 @@ absent() { ! grep -rqE "$1" --exclude-dir=.git --exclude=validate-skill.sh --exc
 echo "validating: srlink plugin"
 check "frontmatter: name"        grep -qE '^name: srlink$' "$skill"
 check "frontmatter: description" grep -qE '^description: ' "$skill"
-check "skill: plugin-root path"  grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs' "$skill"
+check "skill: script path"       grep -qF 'scripts/srlink.cjs' "$skill"
+check "skill: Claude plugin root" grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink' "$skill"
 check "skill: auto-share default on, documents off" grep -qF 'srlink auto-share off' "$skill"
 check "hook: uses plugin root"   grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/hook.cjs' hooks/hooks.json
 check "hook: auto-share gate"     grep -qF 'cfg.autoShare !== true' skills/srlink/scripts/hook.cjs

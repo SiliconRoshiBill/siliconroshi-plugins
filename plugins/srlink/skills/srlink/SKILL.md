@@ -1,17 +1,18 @@
 ---
 name: srlink
-description: SRlink, SiliconRoshi's member network, from Claude Code. Log in once; publish posts to YouTube, Rednote and X through Claude in Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote", "share to SRlink", "SRfeed", "check comments", or right after the user publishes a post anywhere.
+description: SRlink, SiliconRoshi's member network, from Claude Code, Codex or Gemini CLI. Log in once; publish posts to YouTube, Rednote and X through the user's Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote", "share to SRlink", "SRfeed", "check comments", or right after the user publishes a post anywhere.
 ---
 
 # SRlink
 
-Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>` (below: `srlink <command>`). Claude Code fills in `${CLAUDE_PLUGIN_ROOT}` when it loads this skill; if you see the literal text `${CLAUDE_PLUGIN_ROOT}`, find the installed plugin folder with `claude plugin list` (or look under `~/.claude/plugins/`) and use that path.
+Script: `scripts/srlink.cjs` in this skill's own folder, next to this SKILL.md: run `node <skill folder>/scripts/srlink.cjs <command>` (below: `srlink <command>`). In Claude Code the folder is `${CLAUDE_PLUGIN_ROOT}/skills/srlink`; in Codex and Gemini CLI use the folder this skill was loaded from. The skill works the same in Claude Code, Codex and Gemini CLI, and they share one login and config in `~/.srlink/`.
 
 ## Ground rules
 
 - Act only in the user's own logged-in browser and only when the user asks. Never store social-platform passwords, cookies or tokens (the only thing kept is the SRlink token in `~/.srlink/config.json`); stop and ask at any login, 2FA, captcha or rate-limit prompt, and never retry around a platform block.
 - Every publish needs an explicit "publish" (or the same word in the user's language) from the user for that one post. Show the exact final text, title, platform and media first; re-show after any edit. No batch publishing, no unattended publishing.
 - Comments and likes: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. Like only when the user approves the like for that post (default yes, shown next to the comment preview); never like comments; skip if already liked.
+- Browser work (publishing, reading comments, checking a Rednote / LinkedIn / X post) uses a tool that drives the user's own logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. If no such tool is available, say so and ask the user to open the page and paste what you need.
 - Share only the user's own posts to SRlink. Never print the token or `~/.srlink/config.json`.
 - Dates and times: when telling the user a date or time, use the local value the CLI printed (`posted_at_local` in `feed`/`mine`: when the post went public on its platform, or `status`'s plain text) — never UTC and never a raw ISO string. A `--publish-at` with no timezone offset is read as the user's own local time and sent to the server as an absolute UTC instant.
 
@@ -44,7 +45,7 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 - Same title within 7 days adds the platform to the existing card. Always pass `--publish-at` with the time the post went (or goes) public on its platform: a future time schedules it (SRfeed shows it from then); a past time is the date its card shows. Registering an older post without it makes the card show today's date. Read the time from the platform (YouTube: the watch page's publish date; Rednote: Note Management shows Beijing time). `<WHEN>` can be plain local time ("2026-11-01T19:00:00", no offset) — read as the user's own timezone and converted to UTC before sending — or an ISO string that already carries an offset/`Z`.
 - Free users: 1 share a month (on `monthly_limit`, say so and mention upgrading to a membership). Members: no limit.
 - Hook notes: "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published it, with the title just used; ignore links you only opened.
-- The hook (on by default; off after `srlink auto-share off`) runs after Bash and every MCP tool, Claude in Chrome included. On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
+- The hook (on by default; off after `srlink auto-share off`) runs after shell commands and every MCP tool, browser tools included (Claude Code and Codex: `hooks/hooks.json`; Gemini CLI: the extension's own `hooks/hooks.json`). On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
 
 ## 3. Comment on members' posts
 
