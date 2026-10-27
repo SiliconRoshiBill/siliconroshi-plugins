@@ -66,3 +66,10 @@ test('handle: on by default once logged in; silent before login and after auto-s
   assert.equal(await hook.handle(event), null);                       /* explicitly off */
   fs.rmSync(home, { recursive: true, force: true });
 });
+
+test('detectPosts: Rednote share links keep xsec_token; the bare twin of a tokened note is dropped', () => {
+  const id = '6ad146700000000013033800';
+  const shared = `https://www.rednote.com/discovery/item/${id}?source=webshare&xhsshare=pc_web&xsec_token=ABC=&xsec_source=pc_share`;
+  const posts = detectPosts('', `opened https://www.rednote.com/discovery/item/${id} then copied ${shared}`);
+  assert.deepEqual(posts.map((p) => p.url), [shared]);
+});

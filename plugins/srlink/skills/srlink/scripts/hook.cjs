@@ -20,7 +20,9 @@ const path = require('path');
 
 const POST_PATTERNS = [
   ['youtube', /https?:\/\/(?:www\.)?(?:youtu\.be\/[\w-]{11}|youtube\.com\/(?:watch\?v=|shorts\/)[\w-]{11})/g],
-  ['rednote', /https?:\/\/(?:www\.)?(?:(?:xiaohongshu|rednote)\.com\/(?:explore|discovery\/item)\/[0-9a-f]{24}|xhslink\.com\/[\w/]+)/g],
+  /* Rednote note URLs keep their query when it carries xsec_token: only
+   * that form (or an xhslink.com share link) opens for other viewers. */
+  ['rednote', /https?:\/\/(?:www\.)?(?:(?:xiaohongshu|rednote)\.com\/(?:explore|discovery\/item)\/[0-9a-f]{24}(?:\?[^\s"'<>]*xsec_token=[^\s"'<>]+)?|xhslink\.com\/[\w/]+)/g],
   ['linkedin', /https?:\/\/(?:www\.)?linkedin\.com\/(?:feed\/update\/urn:li:[a-zA-Z]+:\d+|posts\/[\w%-]+)/g],
   ['x', /https?:\/\/(?:www\.)?(?:x|twitter)\.com\/\w+\/status\/\d+/g],
 ];
@@ -45,7 +47,20 @@ function detectPosts(inputText, outputText, handles = {}) {
     for (const url of outputText.match(re) || []) add(url, platform);
   }
   for (const url of ownXPaths(outputText, handles.x)) add(url, 'x');
-  return [...found].map(([url, platform]) => ({ url, platform }));
+  return dropBareTwins([...found].map(([url, platform]) => ({ url, platform })));
+}
+
+/* A Rednote note URL without xsec_token is blocked for other viewers;
+ * it needs the share link (分享 / Copy Link) before it is registered. */
+function needsShareLink(p) {
+  return p.platform === 'rednote' && !/xsec_token=|xhslink\.com/.test(p.url);
+}
+
+/* The same note seen bare and with its token: keep the tokened one. */
+function dropBareTwins(posts) {
+  const noteId = (u) => (u.match(/[0-9a-f]{24}/) || [])[0];
+  const tokened = new Set(posts.filter((p) => p.platform === 'rednote' && !needsShareLink(p)).map((p) => noteId(p.url)));
+  return posts.filter((p) => !(needsShareLink(p) && tokened.has(noteId(p.url))));
 }
 
 const TITLE_KEYS = ['title', 'name', 'caption', 'subject'];
@@ -140,7 +155,7 @@ async function handle(event) {
   const ask = [];
   for (const p of posts) {
     const s = recordFor(outputText, p.url);
-    if (!s) { ask.push(p); continue; }
+    if (!s || needsShareLink(p)) { ask.push(p); continue; }
     try {
       const r = await srlink.share({ title: s.title, links: [{ platform: p.platform, url: p.url }], publishAt: s.publishAt });
       notes.push(`Registered on SRlink: "${s.title}" ${p.url}${s.publishAt ? ` (shows in SRfeed from ${s.label || s.publishAt})` : ''}${r.merged ? ', added to the existing card' : ''}. Tell the user in one line.`);
@@ -153,8 +168,11 @@ async function handle(event) {
     notes.push(
       `New post link(s): ${ask.map((p) => `${p.platform} ${p.url}`).join('; ')}. ` +
       'ONLY if the user just published this post themselves (not someone else\'s post you opened), share it to SRlink: ' +
-      `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" [--publish-at <ISO if scheduled>] --link <platform>=<url>. ` +
-      'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.',
+      `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" --publish-at <when it went or goes public> --link <platform>=<url>. ` +
+      'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.' +
+      (ask.some(needsShareLink)
+        ? ' Rednote: that bare note URL is blocked for other viewers, so do not register it. Get the share link first: open the note in Chrome from the user\'s profile, click the share arrow, click Copy Link, read it with `pbpaste`, and register that URL.'
+        : ''),
     );
   }
   return notes.join('\n');
