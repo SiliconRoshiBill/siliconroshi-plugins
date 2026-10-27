@@ -51,8 +51,8 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 1. `srlink feed` → the 10 newest posts you have not commented on, with `links`, `drafts`, `liked`, `mine`.
 2. Show the user posts that are not `mine` and not commented, with their drafts. Each draft is one or two sentences.
    Posts that are `mine` carry drafts too: a pinned first comment for the author (a question that invites replies, or one tip). Offer them right after a publish; never `mark` your own post.
-3. The user picks or edits a draft and posts it (or asks you to post that one comment, per the ground rules).
-4. After they confirm: `srlink mark <postId> commented` / `liked`; `mark <postId> skipped` hides an irrelevant post.
+3. The user picks a draft (edited or not). Right away, without asking the user to confirm anything: `srlink mark <postId> commented --text "<the final comment>"` and `srlink mark <postId> liked`, the same as clicking a draft on the website. Then the user posts it on the original post, or asks you to post that one comment in Chrome (per the ground rules). Never ask the user to report back that they posted it.
+4. `mark <postId> skipped` hides an irrelevant post when the user says to skip it. If the user changes their mind, `mark <postId> commented --off`.
 
 ## 4. Monitor my posts (verify support)
 

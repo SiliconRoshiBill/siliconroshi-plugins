@@ -19,7 +19,7 @@
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME]
 //    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...] [--like HANDLE ...]
-//    node srlink.cjs mark <postId> commented|liked|skipped [--off]
+//    node srlink.cjs mark <postId> commented|liked|skipped [--off] [--text "the comment"]
 //    node srlink.cjs sync                        register my new YouTube videos now
 //    node srlink.cjs schedule on [H]|off|status  ...and every H hours (1-24) here
 //    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
@@ -219,8 +219,10 @@ async function observed(url, platform, comments, likes) {
   return r.data;
 }
 
-async function mark(postId, action, on) {
-  const r = await api('POST', '/api/srlink/interact', { postId: Number(postId), action, on }, authed());
+/* text: with 'commented', the comment the user took, so the hourly
+ * match can find it on the platform and fill in the user's handle. */
+async function mark(postId, action, on, text) {
+  const r = await api('POST', '/api/srlink/interact', { postId: Number(postId), action, on, ...(text ? { text } : {}) }, authed());
   if (!r.ok) throw new Error(`mark failed: ${r.status} ${r.data.error || ''}`);
   return r.data;
 }
@@ -271,7 +273,7 @@ async function main() {
   }
   if (cmd === 'handles') return console.log(JSON.stringify(await handles(f)));
   if (cmd === 'observed') return console.log(JSON.stringify(await observed(f.url, f.platform, f.comment, f.like)));
-  if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true)));
+  if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true, typeof f.text === 'string' ? f.text : undefined)));
   if (cmd === 'sync') return require('./sync.cjs').run(rest);
   if (cmd === 'schedule') return require('./sync.cjs').run(['schedule', ...rest]);
   if (cmd === 'scan') return require('./scan.cjs').run(rest);
