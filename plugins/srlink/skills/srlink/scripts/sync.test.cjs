@@ -43,3 +43,10 @@ test('sameHandle: @, case and channel URLs compare equal', () => {
   assert.ok(sameHandle('https://www.youtube.com/@SiliconRoshi', '@siliconroshi'));
   assert.ok(!sameHandle('https://www.youtube.com/@someoneelse', '@siliconroshi'));
 });
+
+const { similarity } = require('./match.cjs');
+
+test('match similarity: a lightly edited draft still matches; a different comment does not', () => {
+  assert.ok(similarity('拿原图和说明书对一对，这个习惯我也要养成。', '拿原图和说明书对一对,这个习惯我要养成') >= 0.8);
+  assert.ok(similarity('拿原图和说明书对一对，这个习惯我也要养成。', '你最想用 AI 干的一件事是什么？') < 0.8);
+});

@@ -24,6 +24,8 @@
 //    node srlink.cjs schedule on|off             ...and every hour on this computer
 //    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
 //                                                my posts found in my Claude sessions
+//    node srlink.cjs match                       fill readers' missing handles from their comments
+//    node srlink.cjs claim <postId> <personId> <platform> <handle>
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -271,10 +273,12 @@ async function main() {
   if (cmd === 'sync') return require('./sync.cjs').run(rest);
   if (cmd === 'schedule') return require('./sync.cjs').run(['schedule', ...rest]);
   if (cmd === 'scan') return require('./scan.cjs').run(rest);
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan');
+  if (cmd === 'match') return require('./match.cjs').run(rest);
+  if (cmd === 'claim') return require('./match.cjs').run(['claim', ...f._]);
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim');
 }
 
-module.exports = { share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
+module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
 
 if (require.main === module) {
   main().catch((err) => {

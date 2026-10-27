@@ -167,14 +167,23 @@ async function run(argv) {
     console.error(`${stamp()} sync failed: ${e.message}`);
     process.exitCode = 1;
   }
-  /* The hourly run also scans my Claude sessions when that is on; a
-   * failed YouTube check above must not stop it. */
-  if (!argv.includes('--quiet') || !loadConfig().scanSessions) return;
+  if (!argv.includes('--quiet')) return;
+  /* The hourly run also scans my Claude sessions when that is on, and
+   * fills readers' missing handles from their comments; a failure in
+   * one step must not stop the next. */
+  if (loadConfig().scanSessions) {
+    try {
+      const s = await require('./scan.cjs').scan();
+      if (s.added?.length || s.retryLater) console.log(`${stamp()} scan ${JSON.stringify(s)}`);
+    } catch (e) {
+      console.error(`${stamp()} scan failed: ${e.message}`);
+      process.exitCode = 1;
+    }
+  }
   try {
-    const s = await require('./scan.cjs').scan();
-    if (s.added?.length || s.retryLater) console.log(`${stamp()} scan ${JSON.stringify(s)}`);
+    await require('./match.cjs').run(['--quiet']);
   } catch (e) {
-    console.error(`${stamp()} scan failed: ${e.message}`);
+    console.error(`${stamp()} match failed: ${e.message}`);
     process.exitCode = 1;
   }
 }
