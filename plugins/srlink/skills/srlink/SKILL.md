@@ -21,7 +21,8 @@ Script: `node "${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/srlink.cjs" <command>
 2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>]` — the user's own account names, so other members' monitoring can verify their support. Also editable on SRlink → 我的.
 3. Auto-share is on by default once the user is logged in: the plugin's PostToolUse hook registers posts the user publishes with any skill. Tell the user once that it is on and that `srlink auto-share off` turns it off.
 4. Ask the user once: 「要每小时自动检查你的 YouTube 新视频，直接登记到 SRlink 吗？」 On yes: `srlink schedule on` (macOS launchd / Linux crontab; `srlink schedule off` stops it). It only reads the channel's public feed.
-5. `srlink status` to confirm.
+5. Ask the user once: 「也要每小时扫一遍你这台电脑上的 Claude 会话记录，找出你发过的帖子来登记吗？只在本机读，只取帖子链接。」 On yes: `srlink scan on`. YouTube posts are checked and registered without a browser; Rednote, LinkedIn and X ones are handed to Claude at the next session start (see section 5).
+6. `srlink status` to confirm.
 
 ## 1. Publish
 
@@ -67,3 +68,4 @@ Privacy: the server keeps only commenters who are SRlink members (matched by the
 
 - `srlink sync` registers the newest (up to 10, last 30 days) videos of the user's YouTube channel that SRlink has not seen: title without hashtags, a 3-5 sentence summary from the description, the YouTube publish time. `srlink schedule on` runs it every hour. A video already registered, or one the user deleted on SRlink, is never registered again.
 - Rednote, LinkedIn and X have no public feed. When the user asks (「同步一下我的帖子」), open their profile in Chrome, take the newest posts, and register the ones not in `srlink mine` with `srlink share` (Rednote: the Copy Link share URL, see section 2).
+- Session scan (`srlink scan on`): the hourly run also reads this computer's Claude Code session files for post links (local only; nothing but the links leaves). A YouTube video is checked with YouTube's public oEmbed: the user's own, published in the last 30 days -> registered. Rednote / LinkedIn / X links wait as candidates (`srlink scan list`); at session start the plugin asks Claude to open each in Chrome, check the author, and either register it (`srlink share`, then `srlink scan mark <url> registered`) or `srlink scan mark <url> not-mine|old`.

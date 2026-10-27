@@ -11,6 +11,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/session-start.cjs\"",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }

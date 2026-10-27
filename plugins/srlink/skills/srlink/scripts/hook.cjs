@@ -178,7 +178,7 @@ async function handle(event) {
   return notes.join('\n');
 }
 
-module.exports = { detectPosts, recordFor, withNamedFiles, handle };
+module.exports = { detectPosts, recordFor, withNamedFiles, handle, POST_PATTERNS };
 
 if (require.main === module) {
   let raw = '';

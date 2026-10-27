@@ -22,6 +22,8 @@
 //    node srlink.cjs mark <postId> commented|liked|skipped [--off]
 //    node srlink.cjs sync                        register my new YouTube videos now
 //    node srlink.cjs schedule on|off             ...and every hour on this computer
+//    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
+//                                                my posts found in my Claude sessions
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -190,6 +192,13 @@ async function handles(f) {
   return r.data.handles;
 }
 
+/* Which of these links I already registered (deleted posts included). */
+async function known(urls) {
+  const r = await api('POST', '/api/srlink/known', { urls }, authed());
+  if (!r.ok) throw new Error(`known failed: ${r.status} ${r.data.error || ''}`);
+  return r.data.known;
+}
+
 /* The saved handles, asking the server only when none are cached. */
 async function handlesCached() {
   return loadConfig().handles || handles({});
@@ -261,10 +270,11 @@ async function main() {
   if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true)));
   if (cmd === 'sync') return require('./sync.cjs').run(rest);
   if (cmd === 'schedule') return require('./sync.cjs').run(['schedule', ...rest]);
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule');
+  if (cmd === 'scan') return require('./scan.cjs').run(rest);
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan');
 }
 
-module.exports = { share, feed, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
+module.exports = { share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
 
 if (require.main === module) {
   main().catch((err) => {

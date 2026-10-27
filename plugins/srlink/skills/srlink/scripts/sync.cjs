@@ -162,6 +162,11 @@ async function run(argv) {
   try {
     const r = await syncYouTube();
     if (!argv.includes('--quiet') || r.added?.length || r.stopped) console.log(`${new Date().toISOString()} ${JSON.stringify(r)}`);
+    /* The hourly run also scans my Claude sessions when that is on. */
+    if (argv.includes('--quiet') && loadConfig().scanSessions) {
+      const s = await require('./scan.cjs').scan();
+      if (s.added?.length) console.log(`${new Date().toISOString()} scan ${JSON.stringify(s)}`);
+    }
   } catch (e) {
     console.error(`${new Date().toISOString()} sync failed: ${e.message}`);
     process.exitCode = 1;

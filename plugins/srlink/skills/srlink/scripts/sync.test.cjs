@@ -28,3 +28,18 @@ test('cleanTitle: trailing hashtags dropped, the rest kept', () => {
   assert.equal(cleanTitle('一句话请三个高手挑刺 #AI #ClaudeCode #投资理财'), '一句话请三个高手挑刺');
   assert.equal(cleanTitle('No #tags in the middle stay'), 'No #tags in the middle stay');
 });
+
+const { linksIn, sameHandle } = require('./scan.cjs');
+
+test('linksIn: post links out of a JSON transcript line, escapes undone, one entry each', () => {
+  const line = JSON.stringify({ text: 'see https://www.youtube.com/watch?v=abcdefghijk, and https://x.com/bill/status/123. ' +
+    'https://www.rednote.com/discovery/item/6ad146700000000013033800?source=webshare&xsec_token=AB= x' });
+  const found = linksIn(line.replace(/&/g, '\\u0026') + ' https://www.rednote.com/discovery/item/6ad146700000000013033800');
+  assert.deepEqual([...found.values()].map((l) => l.platform).sort(), ['rednote', 'x', 'youtube']);
+  assert.ok(found.get('rednote:6ad146700000000013033800').url.includes('xsec_token=AB='));
+});
+
+test('sameHandle: @, case and channel URLs compare equal', () => {
+  assert.ok(sameHandle('https://www.youtube.com/@SiliconRoshi', '@siliconroshi'));
+  assert.ok(!sameHandle('https://www.youtube.com/@someoneelse', '@siliconroshi'));
+});
