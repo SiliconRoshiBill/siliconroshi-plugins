@@ -159,16 +159,22 @@ function schedule(mode) {
 async function run(argv) {
   const [cmd, arg] = argv.filter((a) => a !== '--quiet');
   if (cmd === 'schedule') return console.log(schedule(arg));
+  const stamp = () => new Date().toISOString();
   try {
     const r = await syncYouTube();
-    if (!argv.includes('--quiet') || r.added?.length || r.stopped) console.log(`${new Date().toISOString()} ${JSON.stringify(r)}`);
-    /* The hourly run also scans my Claude sessions when that is on. */
-    if (argv.includes('--quiet') && loadConfig().scanSessions) {
-      const s = await require('./scan.cjs').scan();
-      if (s.added?.length) console.log(`${new Date().toISOString()} scan ${JSON.stringify(s)}`);
-    }
+    if (!argv.includes('--quiet') || r.added?.length || r.stopped) console.log(`${stamp()} ${JSON.stringify(r)}`);
   } catch (e) {
-    console.error(`${new Date().toISOString()} sync failed: ${e.message}`);
+    console.error(`${stamp()} sync failed: ${e.message}`);
+    process.exitCode = 1;
+  }
+  /* The hourly run also scans my Claude sessions when that is on; a
+   * failed YouTube check above must not stop it. */
+  if (!argv.includes('--quiet') || !loadConfig().scanSessions) return;
+  try {
+    const s = await require('./scan.cjs').scan();
+    if (s.added?.length) console.log(`${stamp()} scan ${JSON.stringify(s)}`);
+  } catch (e) {
+    console.error(`${stamp()} scan failed: ${e.message}`);
     process.exitCode = 1;
   }
 }
