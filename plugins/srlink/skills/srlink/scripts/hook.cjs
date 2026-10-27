@@ -51,7 +51,7 @@ function detectPosts(inputText, outputText, handles = {}) {
 }
 
 /* A Rednote note URL without xsec_token is blocked for other viewers;
- * it needs the share link (分享 / Copy Link) before it is registered. */
+ * it needs the share link (Share > Copy Link) before it is registered. */
 function needsShareLink(p) {
   return p.platform === 'rednote' && !/xsec_token=|xhslink\.com/.test(p.url);
 }

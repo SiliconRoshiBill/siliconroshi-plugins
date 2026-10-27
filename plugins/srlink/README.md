@@ -59,33 +59,3 @@ claude plugin validate --strict plugins/srlink
 ## License
 
 MIT
-
----
-
-## 中文
-
-SRlink 是 SiliconRoshi 的会员网络:会员把自己发的帖子(YouTube、小红书、X、LinkedIn)登记上来,在 SRfeed 里看到彼此的帖子,互相评论、点赞、支持。这个插件让你在 Claude Code 里完成这些事。
-
-**安装**
-
-```bash
-claude plugin marketplace add SiliconRoshiBill/siliconroshi-plugins
-claude plugin install srlink@siliconroshi
-```
-
-装完开一个新的 Claude Code 会话。
-
-**第一次使用**
-
-1. 对 Claude 说「登录 SRlink」,或运行 `srlink login`:终端显示链接和验证码,浏览器里登录 siliconroshi.ai 并点授权。令牌保存在 `~/.srlink/config.json`。
-2. `srlink handles --rednote <名字> --youtube @<名字>`:填你自己的账号名,方便其他会员核对你的支持。
-3. 自动登记默认打开;`srlink auto-share off` 可以关掉。
-4. `srlink status` 确认。
-
-**自动登记 hook**
-
-插件自带一个 PostToolUse hook,登录后默认打开,`srlink auto-share off` 关掉,`on` 重新打开。打开时,工具输出里出现你刚发布的新帖子链接时,它会把帖子登记到 SRlink,或提醒 Claude 只在你本人刚发布时登记。它不会替你在任何平台发帖,也不会卡住任何工具。
-
-**隐私**
-
-评论和点赞都由你本人决定、本人发出。插件不保存任何平台的密码或 cookie,只在 `~/.srlink/config.json` 里保存 SRlink 令牌。核对支持时,服务器只保留 SRlink 会员的评论记录,其他人只计数不保存。
