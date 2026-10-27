@@ -65,7 +65,9 @@ async function youtubeComments(id) {
     }
     queue = next;
   }
-  return comments;
+  /* Several continuation entry points can return the same thread. */
+  const seen = new Set();
+  return comments.filter((c) => { const k = `${c.author}\n${c.text}`; return !seen.has(k) && seen.add(k); });
 }
 
 /* ------------------------------------------------------------
