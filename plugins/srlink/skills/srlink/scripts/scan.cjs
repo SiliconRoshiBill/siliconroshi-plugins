@@ -4,7 +4,7 @@
 //    node scan.cjs              scan now (also part of the background run)
 //    node scan.cjs on|off       opt in / out (asked once at setup)
 //    node scan.cjs list         candidates still waiting for Claude
-//    node scan.cjs mark <url> registered|not-mine|old
+//    node scan.cjs mark <url> registered|not-mine|old|not-public
 //
 //  Reads ~/.claude/projects/**/*.jsonl changed since the last scan,
 //  on this computer only, and keeps nothing but post links. Links
@@ -76,6 +76,14 @@ const videoId = (url) => (url.match(/(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11}
 const sameHandle = (a, b) => String(a || '').replace(/^.*\//, '').replace(/^@/, '').toLowerCase()
   === String(b || '').replace(/^.*\//, '').replace(/^@/, '').toLowerCase();
 
+/* Only public videos belong on SRlink. oEmbed also answers for
+ * unlisted videos (class recordings, owner 2026-10-28), so read the
+ * watch page: unlisted or not playable (private, removed) is not public. */
+async function youtubePublic(id) {
+  const html = await (await fetch(`https://www.youtube.com/watch?v=${id}`, { headers: UA })).text();
+  return /"isUnlisted":false/.test(html) && /"playabilityStatus":\{"status":"OK"/.test(html) ? html : null;
+}
+
 async function youtubeIfMine(url, handle) {
   const id = videoId(url);
   const o = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`, { headers: UA });
@@ -83,7 +91,8 @@ async function youtubeIfMine(url, handle) {
   const { author_url: author } = await o.json();
   const channel = loadConfig().youtubeChannel?.id;
   if (!sameHandle(author, handle) && !(channel && author.endsWith(channel))) return null;
-  const html = await (await fetch(`https://www.youtube.com/watch?v=${id}`, { headers: UA })).text();
+  const html = await youtubePublic(id);
+  if (!html) return { id, notPublic: true };
   const pick = (re) => { const m = html.match(re); return m ? JSON.parse(`"${m[1]}"`) : ''; };
   return {
     id,
@@ -120,6 +129,7 @@ async function scan() {
     if (platform !== 'youtube') { entry('pending'); continue; }
     const v = handle ? await youtubeIfMine(url, handle).catch(() => null) : null;
     if (!v) { entry('not-mine'); continue; }
+    if (v.notPublic) { entry('not-public'); continue; }
     if (tooOld(v.published)) { entry('old'); continue; }
     /* A failed share (rate limit, network) leaves no record, so the
      * next run tries this video again; the rest of the scan goes on. */
@@ -138,7 +148,7 @@ const pending = () => Object.values(loadCandidates()).filter((c) => c.status ===
   .map(({ url, platform }) => ({ url, platform }));
 
 function mark(url, status) {
-  if (!['registered', 'not-mine', 'old'].includes(status)) return 'Use: mark <url> registered|not-mine|old';
+  if (!['registered', 'not-mine', 'old', 'not-public'].includes(status)) return 'Use: mark <url> registered|not-mine|old|not-public';
   const c = loadCandidates();
   const key = postKey(url);
   if (!c[key]) return `not a candidate: ${url}`;
@@ -160,6 +170,6 @@ async function run(argv) {
   console.log(`${new Date().toISOString()} scan ${JSON.stringify(await scan())}`);
 }
 
-module.exports = { linksIn, sameHandle, pending, scan, run };
+module.exports = { linksIn, sameHandle, youtubePublic, pending, scan, run };
 
 if (require.main === module) run(process.argv.slice(2)).catch((e) => { console.error(`scan failed: ${e.message}`); process.exit(1); });

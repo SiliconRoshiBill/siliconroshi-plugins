@@ -13,7 +13,7 @@ Script: `scripts/srlink.cjs` in this skill's own folder, next to this SKILL.md: 
 - Every publish needs an explicit "publish" (or the same word in the user's language) from the user for that one post. Show the exact final text, title, platform and media first; re-show after any edit. No batch publishing, no unattended publishing.
 - Comments and likes: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. Like only when the user approves the like for that post (default yes, shown next to the comment preview); never like comments; skip if already liked.
 - Browser work (publishing, reading comments, checking a Rednote / LinkedIn / X post) uses a tool that drives the user's own logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. If no such tool is available, say so and ask the user to open the page and paste what you need.
-- Share only the user's own posts to SRlink. Never print the token or `~/.srlink/config.json`.
+- Share only the user's own PUBLIC posts to SRlink. Never register an unlisted or private video (class recordings, member-only lessons), even if the user owns it. Never print the token or `~/.srlink/config.json`.
 - Dates and times: when telling the user a date or time, use the local value the CLI printed (`posted_at_local` in `feed`/`mine`: when the post went public on its platform, or `status`'s plain text) — never UTC and never a raw ISO string. A `--publish-at` with no timezone offset is read as the user's own local time and sent to the server as an absolute UTC instant.
 
 ## Setup (once per computer)

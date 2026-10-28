@@ -157,6 +157,12 @@ async function handle(event) {
   for (const p of posts) {
     const s = recordFor(outputText, p.url);
     if (!s || needsShareLink(p)) { ask.push(p); continue; }
+    /* Never auto-register an unlisted or private upload (class recordings). */
+    if (p.platform === 'youtube') {
+      const id = (p.url.match(/(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11})/) || [])[1];
+      const pub = await require('./scan.cjs').youtubePublic(id).catch(() => null);
+      if (!pub) { notes.push(`Not registered on SRlink: ${p.url} is not a public video. Only public posts go on SRlink.`); continue; }
+    }
     try {
       const r = await srlink.share({ title: s.title, links: [{ platform: p.platform, url: p.url }], publishAt: s.publishAt });
       notes.push(`Registered on SRlink: "${s.title}" ${p.url}${s.publishAt ? ` (shows in SRfeed from ${s.label || s.publishAt})` : ''}${r.merged ? ', added to the existing card' : ''}. Tell the user in one line.`);
@@ -168,7 +174,7 @@ async function handle(event) {
     const cli = path.join(__dirname, 'srlink.cjs');
     notes.push(
       `New post link(s): ${ask.map((p) => `${p.platform} ${p.url}`).join('; ')}. ` +
-      'ONLY if the user just published this post themselves (not someone else\'s post you opened), share it to SRlink: ' +
+      'ONLY if the user just published this post themselves (not someone else\'s post you opened) AND it is public (never an unlisted or private video, such as a class recording), share it to SRlink: ' +
       `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" --publish-at <when it went or goes public> --link <platform>=<url>. ` +
       'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.' +
       (ask.some(needsShareLink)
