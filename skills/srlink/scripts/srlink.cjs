@@ -17,7 +17,7 @@
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
-//    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME]
+//    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME --tiktok @NAME --instagram NAME --reddit u/NAME]
 //    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...] [--like HANDLE ...]
 //    node srlink.cjs mark <postId> commented|liked|skipped [--off] [--text "the comment"]
 //    node srlink.cjs sync                        register my new YouTube videos now
@@ -44,6 +44,7 @@ const trimUrl = (u) => String(u).replace(/\/$/, '');
 const PLATFORM_ALIASES = {
   rednote: 'xiaohongshu', xhs: 'xiaohongshu', xiaohongshu: 'xiaohongshu',
   youtube: 'youtube', yt: 'youtube', linkedin: 'linkedin', x: 'x', twitter: 'x',
+  tiktok: 'tiktok', tt: 'tiktok', instagram: 'instagram', ig: 'instagram', insta: 'instagram', reddit: 'reddit',
 };
 const platformKey = (p) => PLATFORM_ALIASES[String(p || '').toLowerCase()] || 'other';
 
@@ -191,7 +192,7 @@ async function mine() {
 
 async function handles(f) {
   const body = {};
-  for (const [flag, key] of [['rednote', 'xiaohongshu'], ['youtube', 'youtube'], ['linkedin', 'linkedin'], ['x', 'x']]) {
+  for (const [flag, key] of [['rednote', 'xiaohongshu'], ['youtube', 'youtube'], ['linkedin', 'linkedin'], ['x', 'x'], ['tiktok', 'tiktok'], ['instagram', 'instagram'], ['reddit', 'reddit']]) {
     if (f[flag] !== undefined) body[key] = f[flag] === true ? '' : f[flag];
   }
   const r = Object.keys(body).length

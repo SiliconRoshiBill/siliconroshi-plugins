@@ -2,7 +2,7 @@
 
 Part of the SiliconRoshi plugin marketplace (`SiliconRoshiBill/siliconroshi-plugins`). If you already added that marketplace, `/plugin install srlink@siliconroshi` is all you need.
 
-SRlink is SiliconRoshi's member network. Members register the posts they publish (YouTube, Rednote, X, LinkedIn), read each other's posts in the SRfeed, and help support each other with comments and likes. This plugin lets you do all of that from Claude Code, Codex or Gemini CLI. All three share one login and settings in `~/.srlink/`.
+SRlink is SiliconRoshi's member network. Members register the posts they publish (YouTube, Rednote, X, LinkedIn, TikTok, Instagram, Reddit), read each other's posts in the SRfeed, and help support each other with comments and likes. This plugin lets you do all of that from Claude Code, Codex or Gemini CLI. All three share one login and settings in `~/.srlink/`.
 
 It bundles:
 
@@ -36,7 +36,7 @@ Open a new session in that agent afterwards.
 
 What differs between agents:
 
-- Browser steps (publishing, reading comments, checking Rednote / LinkedIn / X posts) need a tool that drives your logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. Without one, the agent asks you to open the page.
+- Browser steps (publishing, reading comments, checking Rednote / LinkedIn / X / TikTok / Instagram / Reddit posts) need a tool that drives your logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. Without one, the agent asks you to open the page.
 - The session scan reads Claude Code session logs only.
 
 ## First run
@@ -44,7 +44,7 @@ What differs between agents:
 Ask your agent "log in to SRlink", or run the steps yourself (`<plugin>` is the installed plugin folder; the agent fills it in):
 
 1. `node <plugin>/skills/srlink/scripts/srlink.cjs login` prints a link and a code and opens your browser. Sign in at siliconroshi.ai and approve. A token is saved to `~/.srlink/config.json` (mode 600).
-2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>]` saves your own account names, so other members can verify your support.
+2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>] [--tiktok @<name>] [--instagram <name>] [--reddit u/<name>]` saves your own account names, so other members can verify your support.
 3. Auto-share is on by default; `srlink auto-share off` turns it off (see below).
 4. `srlink status` to confirm.
 

@@ -34,6 +34,21 @@ test('recordFor: JSON printed inside a tool envelope is still read', () => {
   assert.equal(recordFor(out, url).title, 'Printed');
 });
 
+test('detectPosts: TikTok videos (full and short links) and Instagram posts and reels', () => {
+  const out = 'https://www.tiktok.com/@bill.wu/video/7430000000000000000 https://vm.tiktok.com/ZMabc123 ' +
+    'https://www.instagram.com/p/DAbCdEfGhIj/ https://www.instagram.com/reel/DAbCdEfGhIk/';
+  assert.deepEqual(detectPosts('', out).map((p) => p.platform), ['tiktok', 'tiktok', 'instagram', 'instagram']);
+});
+
+test('detectPosts: Reddit posts (full, share and short links)', () => {
+  const out = 'https://www.reddit.com/r/ClaudeAI/comments/1abc2de/my_agent/ https://www.reddit.com/r/ClaudeAI/s/AbCdEf12 https://redd.it/1abc2df';
+  assert.deepEqual(detectPosts('', out).map((p) => p.platform), ['reddit', 'reddit', 'reddit']);
+});
+
+test('detectPosts: TikTok, Instagram and Reddit profile pages are not posts', () => {
+  assert.deepEqual(detectPosts('', 'https://www.tiktok.com/@bill.wu https://www.instagram.com/billwu/ https://www.reddit.com/user/billwu/ https://www.reddit.com/r/ClaudeAI/'), []);
+});
+
 test('detectPosts: rednote.com note links count as rednote', () => {
   assert.equal(detectPosts('', 'https://www.rednote.com/explore/0123456789abcdef01234567')[0].platform, 'rednote');
 });

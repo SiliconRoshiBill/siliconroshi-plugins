@@ -26,6 +26,9 @@ const POST_PATTERNS = [
   ['rednote', /https?:\/\/(?:www\.)?(?:(?:xiaohongshu|rednote)\.com\/(?:explore|discovery\/item)\/[0-9a-f]{24}(?:\?[^\s"'<>]*xsec_token=[^\s"'<>]+)?|xhslink\.com\/[\w/]+)/g],
   ['linkedin', /https?:\/\/(?:www\.)?linkedin\.com\/(?:feed\/update\/urn:li:[a-zA-Z]+:\d+|posts\/[\w%-]+)/g],
   ['x', /https?:\/\/(?:www\.)?(?:x|twitter)\.com\/\w+\/status\/\d+/g],
+  ['tiktok', /https?:\/\/(?:(?:www\.)?tiktok\.com\/@[\w.-]+\/(?:video|photo)\/\d+|(?:vm|vt)\.tiktok\.com\/\w+)/g],
+  ['instagram', /https?:\/\/(?:www\.)?instagram\.com\/(?:[\w.]+\/)?(?:p|reels?)\/[\w-]+/g],
+  ['reddit', /https?:\/\/(?:(?:(?:www|old|new)\.)?reddit\.com\/(?:r|u|user)\/[\w-]+\/(?:comments|s)\/\w+(?:\/[\w%-]+)?|redd\.it\/\w+)/g],
 ];
 
 /* Pages read through Claude in Chrome give X links as bare paths

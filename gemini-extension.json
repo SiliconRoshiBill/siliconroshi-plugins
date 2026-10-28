@@ -1,5 +1,5 @@
 {
   "name": "srlink",
-  "version": "0.1.15",
+  "version": "0.1.16",
   "description": "SRlink, SiliconRoshi's member network, in Gemini CLI. Log in once, register your published posts, read the SRfeed with comment drafts, and see which members supported your posts. Same skill and CLI as the Claude Code and Codex plugin (plugins/srlink)."
 }
