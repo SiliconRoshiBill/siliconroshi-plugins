@@ -35,3 +35,30 @@ test('namedJsonFiles: POSIX and Windows paths (JSON-escaped or not)', () => {
   const out = String.raw`wrote /tmp/out/result.json; also C:\\work\\up\\r.json and D:/x/y.json`;
   assert.deepEqual(namedJsonFiles(out), ['/tmp/out/result.json', String.raw`C:\work\up\r.json`, 'D:/x/y.json']);
 });
+
+test('ensureScheduled: on by default once logged in, never after the user turned it off', () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  process.env.SRLINK_HOME = fs.mkdtempSync(path.join(os.tmpdir(), 'srlink-sched-'));
+  for (const k of Object.keys(require.cache)) if (/srlink\.cjs$|sync\.cjs$|log\.cjs$/.test(k)) delete require.cache[k];
+  const srlink = require('./srlink.cjs');
+  const sync = require('./sync.cjs');
+  /* a fake scheduler for this OS: nothing real is installed */
+  let installed = false;
+  sync.SCHEDULERS[process.platform] = { on: () => { installed = true; }, off: () => { installed = false; }, installed: () => installed };
+
+  assert.equal(sync.ensureScheduled(), null, 'not logged in: nothing');
+  srlink.saveConfig({ token: 't' });
+  assert.match(sync.ensureScheduled(), /^Background check on, every hour\..*schedule off/);
+  assert.equal(installed, true);
+  assert.equal(sync.ensureScheduled(), null, 'already on: nothing');
+
+  sync.schedule('off');
+  assert.equal(installed, false);
+  assert.equal(srlink.loadConfig().scheduleOff, true);
+  assert.equal(sync.ensureScheduled(), null, 'the user said off: stays off');
+
+  sync.schedule('on', 3);
+  assert.equal(srlink.loadConfig().scheduleOff, undefined, 'turning it on again clears the off');
+});

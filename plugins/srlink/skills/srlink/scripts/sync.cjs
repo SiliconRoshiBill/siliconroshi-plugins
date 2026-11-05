@@ -213,9 +213,23 @@ function schedule(mode, h) {
     fs.writeFileSync(LAUNCHER, LAUNCHER_SRC);
   }
   if (mode === 'on') sched.on(hours); else sched.off();
-  const { scheduleHours, ...rest } = loadConfig();
-  saveConfig(mode === 'on' ? { ...rest, scheduleHours: hours } : rest);
+  /* scheduleOff remembers a user's own "off", so it is never turned back on for them. */
+  const { scheduleHours, scheduleOff, ...rest } = loadConfig();
+  saveConfig(mode === 'on' ? { ...rest, scheduleHours: hours } : { ...rest, scheduleOff: true });
   return mode === 'on' ? `Background check on, ${every(hours)}. Log: ${LOG}` : 'Background check off.';
+}
+
+/* On by default once logged in (owner, 2026-11-04), like auto-share:
+ * login and every session start turn it on, unless the user turned it
+ * off. Returns the one line to tell the user, or null if nothing changed. */
+function ensureScheduled() {
+  const cfg = loadConfig();
+  if (!cfg.token || cfg.scheduleOff || !scheduler() || scheduledHours()) return null;
+  try {
+    return `${schedule('on', 1)} It checks your YouTube channel for new public videos and registers them on SRlink; \`srlink schedule off\` stops it.`;
+  } catch (e) {
+    return `Could not start the background check (${e.message}); \`srlink schedule on\` tries again.`;
+  }
 }
 
 /* --quiet (the background run) logs only when something was added. */
@@ -251,6 +265,6 @@ async function run(argv) {
   }
 }
 
-module.exports = { LAUNCHER_SRC, windowsTaskArgs, SCHEDULERS, parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
+module.exports = { LAUNCHER_SRC, windowsTaskArgs, SCHEDULERS, ensureScheduled, parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
 
 if (require.main === module) run(process.argv.slice(2));

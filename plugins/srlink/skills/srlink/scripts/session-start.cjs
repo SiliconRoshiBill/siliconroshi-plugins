@@ -5,7 +5,8 @@
 //    - feed comments on the user's posts whose writer has no handle
 //      there yet: find who wrote it under the post, then claim.
 //  At most one reminder every 6 hours, at most 10 items of each.
-//  Silent when there is nothing.
+//  Also turns the background check on for a logged-in user who never
+//  had it (sync.cjs ensureScheduled). Silent when there is nothing.
 // ============================================================
 
 const path = require('path');
@@ -24,15 +25,21 @@ async function unmatchedForBrowser() {
 }
 
 async function note() {
+  if (!loadConfig().token) return null;
+  const scheduled = require('./sync.cjs').ensureScheduled();
+  const lines = [...(scheduled ? [`SRlink: ${scheduled} Tell the user in one line.`] : []), ...await reminders()];
+  return lines.length ? lines.join('\n') : null;
+}
+
+async function reminders() {
   const cfg = loadConfig();
-  if (!cfg.token) return null;
-  if (cfg.lastScanReminder && Date.now() - Date.parse(cfg.lastScanReminder) < EVERY_MS) return null;
+  if (cfg.lastScanReminder && Date.now() - Date.parse(cfg.lastScanReminder) < EVERY_MS) return [];
   const list = cfg.scanSessions ? pending().slice(0, MAX) : [];
   const comments = await unmatchedForBrowser();
-  if (!list.length && !comments.length) return null;
+  if (!list.length && !comments.length) return [];
   saveConfig({ ...cfg, lastScanReminder: new Date().toISOString() });
   const cli = path.join(__dirname, 'srlink.cjs');
-  return [...(list.length ? postsNote(list, cli) : []), ...(comments.length ? commentsNote(comments, cli) : [])].join('\n');
+  return [...(list.length ? postsNote(list, cli) : []), ...(comments.length ? commentsNote(comments, cli) : [])];
 }
 
 function commentsNote(comments, cli) {

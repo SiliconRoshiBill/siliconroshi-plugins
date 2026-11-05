@@ -158,7 +158,8 @@ async function login(lang, name, url) {
     const st = poll.data.status;
     if (st === 'approved') {
       saveConfig({ ...loadConfig(), base, token: poll.data.access_token, saved_at: new Date().toISOString() });
-      return `Logged in to ${base}. Token saved to ${CONFIG}`;
+      const scheduled = require('./sync.cjs').ensureScheduled();
+      return [`Logged in to ${base}. Token saved to ${CONFIG}`, scheduled].filter(Boolean).join('\n');
     }
     if (st === 'denied') throw new Error('Login denied in the browser.');
     if (st === 'expired') throw new Error('Code expired. Run login again.');

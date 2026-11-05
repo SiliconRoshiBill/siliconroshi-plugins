@@ -46,6 +46,7 @@ Ask your agent "log in to SRlink", or run the steps yourself (`<plugin>` is the 
 1. `node <plugin>/skills/srlink/scripts/srlink.cjs login` prints a link and a code and opens your browser. Sign in at siliconroshi.ai and approve. A token is saved to `~/.srlink/config.json` (mode 600).
 2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>] [--tiktok @<name>] [--instagram <name>] [--reddit u/<name>]` saves your own account names, so other members can verify your support.
 3. Auto-share is on by default; `srlink auto-share off` turns it off (see below).
+   The background YouTube check is on by default as well: every hour it registers your new public videos (macOS launchd, Windows Task Scheduler, Linux crontab). `srlink schedule off` stops it for good; `srlink schedule on [hours]` changes the interval.
 4. `srlink status` to confirm.
 
 Other commands: `share`, `feed`, `mine`, `mark`, `observed`, `log`, `logout`. `login --url <site>` points at a test server; the default is https://www.siliconroshi.ai.
