@@ -26,6 +26,7 @@
 //                                                my posts found in my Claude sessions
 //    node srlink.cjs match                       fill readers' missing handles from their comments
 //    node srlink.cjs claim <postId> <personId> <platform> <handle>
+//    node srlink.cjs log [N]                     last N server requests (~/.srlink/logs)
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -35,6 +36,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const log = require('./log.cjs');
 
 const DIR = process.env.SRLINK_HOME || path.join(os.homedir(), '.srlink');
 const CONFIG = path.join(DIR, 'config.json');
@@ -102,12 +104,35 @@ function serverUrl() {
   return trimUrl(loadConfig().base || process.env.SRLINK_URL || PRODUCTION);
 }
 
+/* Plugin version, from whichever manifest ships next to this skill. */
+const VERSION = (() => {
+  for (const m of ['../../../.claude-plugin/plugin.json', '../../../gemini-extension.json']) {
+    try { return require(path.join(__dirname, m)).version; } catch { /* not this layout */ }
+  }
+  return 'dev';
+})();
+
+/* The ONE door to the server: every request is logged (log.cjs) and
+ * carries a request id + user-agent the server's logs can be searched by. */
 async function api(method, route, body, token, base = serverUrl()) {
-  const headers = { 'content-type': 'application/json' };
+  const rid = require('crypto').randomUUID().slice(0, 8);
+  const headers = {
+    'content-type': 'application/json',
+    'user-agent': `srlink/${VERSION} (${process.platform}; ${agentName()})`,
+    'x-srlink-request-id': rid,
+  };
   if (token) headers.authorization = `Bearer ${token}`;
-  const res = await fetch(base + route, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json().catch(() => ({}));
-  return { ok: res.ok, status: res.status, data };
+  const started = Date.now();
+  const entry = { rid, method, url: base + route, sent: body };
+  try {
+    const res = await fetch(base + route, { method, headers, body: body ? JSON.stringify(body) : undefined });
+    const data = await res.json().catch(() => ({}));
+    log.record({ ...entry, status: res.status, ms: Date.now() - started, got: data });
+    return { ok: res.ok, status: res.status, data };
+  } catch (e) {
+    log.record({ ...entry, ms: Date.now() - started, error: e.cause?.code || e.message });
+    throw e;
+  }
 }
 
 function authed() {
@@ -288,7 +313,8 @@ async function main() {
   if (cmd === 'scan') return require('./scan.cjs').run(rest);
   if (cmd === 'match') return require('./match.cjs').run(rest);
   if (cmd === 'claim') return require('./match.cjs').run(['claim', ...f._]);
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim');
+  if (cmd === 'log') return console.log(log.tail(Number(f._[0]) || 20));
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log');
 }
 
 module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };

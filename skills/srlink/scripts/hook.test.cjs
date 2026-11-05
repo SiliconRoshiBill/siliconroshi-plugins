@@ -88,3 +88,36 @@ test('detectPosts: Rednote share links keep xsec_token; the bare twin of a token
   const posts = detectPosts('', `opened https://www.rednote.com/discovery/item/${id} then copied ${shared}`);
   assert.deepEqual(posts.map((p) => p.url), [shared]);
 });
+
+test('shareNote: a 200 is reported as what it really was', () => {
+  const { shareNote } = require('./hook.cjs');
+  const s = { title: 'T' };
+  assert.match(shareNote({ ok: true, id: 9 }, s, 'u'), /^Registered on SRlink: "T" u \(card #9\)/);
+  assert.match(shareNote({ ok: true, id: 9, merged: true }, s, 'u'), /added to the existing card/);
+  assert.match(shareNote({ ok: true, id: 9, existing: true }, s, 'u'), /^Already on SRlink/);
+  assert.match(shareNote({ ok: true, id: 9, existing: true, deleted: true }, s, 'u'), /^Not registered on SRlink: .*deleted/);
+});
+
+test('handle: a failed share is not remembered as seen, so it retries next time', async () => {
+  const fs = require('fs');
+  const os = require('os');
+  const path = require('path');
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'srlink-retry-'));
+  process.env.SRLINK_HOME = home;
+  for (const k of Object.keys(require.cache)) if (/srlink\.cjs$|hook\.cjs$|log\.cjs$/.test(k)) delete require.cache[k];
+  const srlink = require('./srlink.cjs');
+  const hook = require('./hook.cjs');
+  srlink.saveConfig({ token: 't' });
+  srlink.feed = async () => ({ posts: [] });
+  const url = 'https://x.com/someone/status/123';
+  const event = { tool_input: {}, tool_response: { stdout: JSON.stringify({ title: 'My post', url }) } };
+
+  srlink.share = async () => { throw new Error('share failed: 500 boom'); };
+  assert.match(await hook.handle(event), /share failed .*Not registered/);
+  assert.equal(fs.existsSync(path.join(home, 'seen.json')) && JSON.parse(fs.readFileSync(path.join(home, 'seen.json'))).includes(url), false);
+
+  srlink.share = async () => ({ ok: true, id: 5 });
+  assert.match(await hook.handle(event), /Registered on SRlink: "My post"/);
+  assert.ok(JSON.parse(fs.readFileSync(path.join(home, 'seen.json'))).includes(url));
+  assert.equal(await hook.handle(event), null);
+});

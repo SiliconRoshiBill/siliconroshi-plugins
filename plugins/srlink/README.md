@@ -48,7 +48,7 @@ Ask your agent "log in to SRlink", or run the steps yourself (`<plugin>` is the 
 3. Auto-share is on by default; `srlink auto-share off` turns it off (see below).
 4. `srlink status` to confirm.
 
-Other commands: `share`, `feed`, `mine`, `mark`, `observed`, `logout`. `login --url <site>` points at a test server; the default is https://www.siliconroshi.ai.
+Other commands: `share`, `feed`, `mine`, `mark`, `observed`, `log`, `logout`. `login --url <site>` points at a test server; the default is https://www.siliconroshi.ai.
 
 ## The auto-share hook
 
@@ -65,6 +65,7 @@ On X it only counts bare `/<handle>/status/<id>` paths for your own saved handle
 
 - Comments and likes are written and posted by you. The agent helps click only when you ask for that specific comment or like.
 - The plugin never stores passwords or cookies for any platform. The only thing it keeps is your SRlink token in `~/.srlink/config.json`, plus a list of links it has already seen.
+- Every request to the SRlink server is logged in `~/.srlink/logs/` (what was sent, when, and the reply; kept 14 days; the token is never written). `srlink log` shows the latest ones.
 - When you check who supported your posts, the server keeps only commenters who are SRlink members; everyone else is counted and dropped.
 
 ## Development

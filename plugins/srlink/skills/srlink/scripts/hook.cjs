@@ -127,6 +127,17 @@ function saveSeen(dir, seen) {
   fs.writeFileSync(seenFile(dir), JSON.stringify(seen.slice(-500)));
 }
 
+/* What the server's reply means, said plainly: a 200 is not always
+ * a new card (posts.ts returns existing / deleted / merged). */
+const SHARE_OUTCOME = {
+  deleted: (s, url, r) => `Not registered on SRlink: ${url} was deleted from SRlink earlier (card #${r.id}), so it stays off. Tell the user in one line.`,
+  existing: (s, url, r) => `Already on SRlink: ${url} (card #${r.id}); nothing new was added. Tell the user in one line.`,
+  merged: (s, url, r) => `Registered on SRlink: ${url} added to the existing card "${s.title}" (#${r.id}). Tell the user in one line.`,
+  created: (s, url, r) => `Registered on SRlink: "${s.title}" ${url} (card #${r.id})${s.publishAt ? `, shows in SRfeed from ${s.label || s.publishAt}` : ''}. Tell the user in one line.`,
+};
+const outcomeOf = (r) => (r.existing ? (r.deleted ? 'deleted' : 'existing') : r.merged ? 'merged' : 'created');
+const shareNote = (r, s, url) => SHARE_OUTCOME[outcomeOf(r)](s, url, r);
+
 async function handle(event) {
   const srlink = require('./srlink.cjs');
   const cfg = srlink.loadConfig();
@@ -142,8 +153,8 @@ async function handle(event) {
   const seen = loadSeen(srlink.DIR);
   const posts = detectPosts(inputText, outputText, cfg.handles).filter((p) => !seen.includes(p.url));
   if (!posts.length) return null;
-  saveSeen(srlink.DIR, [...seen, ...posts.map((p) => p.url)]);
   if (!cfg.token) {
+    saveSeen(srlink.DIR, [...seen, ...posts.map((p) => p.url)]);
     return `SRlink: new post link(s) ${posts.map((p) => p.url).join(', ')} seen, but SRlink is not logged in. Do nothing unless the user asks.`;
   }
   /* Skip links that are already on SRlink (e.g. printed by a query). */
@@ -157,22 +168,27 @@ async function handle(event) {
 
   const notes = [];
   const ask = [];
+  /* A link is remembered as seen only once it reached an outcome; a
+   * failed share is not, so the next time the link shows up it retries. */
+  const done = [];
   for (const p of posts) {
     const s = recordFor(outputText, p.url);
-    if (!s || needsShareLink(p)) { ask.push(p); continue; }
+    if (!s || needsShareLink(p)) { ask.push(p); done.push(p.url); continue; }
     /* Never auto-register an unlisted or private upload (class recordings). */
     if (p.platform === 'youtube') {
       const id = (p.url.match(/(?:[?&]v=|youtu\.be\/|\/shorts\/)([\w-]{11})/) || [])[1];
       const pub = await require('./scan.cjs').youtubePublic(id).catch(() => null);
-      if (!pub) { notes.push(`Not registered on SRlink: ${p.url} is not a public video. Only public posts go on SRlink.`); continue; }
+      if (!pub) { notes.push(`Not registered on SRlink: ${p.url} is not a public video. Only public posts go on SRlink.`); done.push(p.url); continue; }
     }
     try {
       const r = await srlink.share({ title: s.title, links: [{ platform: p.platform, url: p.url }], publishAt: s.publishAt });
-      notes.push(`Registered on SRlink: "${s.title}" ${p.url}${s.publishAt ? ` (shows in SRfeed from ${s.label || s.publishAt})` : ''}${r.merged ? ', added to the existing card' : ''}. Tell the user in one line.`);
+      notes.push(shareNote(r, s, p.url));
+      done.push(p.url);
     } catch (e) {
-      notes.push(`SRlink share failed for ${p.url}: ${e.message}. Tell the user; they can retry with srlink share.`);
+      notes.push(`SRlink share failed for ${p.url}: ${e.message}. Not registered. Tell the user; they can retry with srlink share (details: srlink log).`);
     }
   }
+  saveSeen(srlink.DIR, [...seen, ...done]);
   if (ask.length) {
     const cli = path.join(__dirname, 'srlink.cjs');
     notes.push(
@@ -188,7 +204,7 @@ async function handle(event) {
   return notes.join('\n');
 }
 
-module.exports = { detectPosts, recordFor, withNamedFiles, handle, POST_PATTERNS };
+module.exports = { detectPosts, recordFor, withNamedFiles, handle, shareNote, POST_PATTERNS };
 
 if (require.main === module) {
   let raw = '';
@@ -202,7 +218,10 @@ if (require.main === module) {
         const hookEventName = event.hook_event_name || 'PostToolUse';
         process.stdout.write(JSON.stringify({ hookSpecificOutput: { hookEventName, additionalContext: note } }));
       }
-    } catch { /* a broken hook must never break the user's tool */ }
+    } catch (e) {
+      /* a broken hook must never break the user's tool, but it must leave a trace */
+      require('./log.cjs').record({ error: `hook: ${e.message}` });
+    }
     process.exit(0);
   });
 }
