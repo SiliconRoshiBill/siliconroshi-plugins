@@ -32,6 +32,6 @@ test('Windows task: HOURLY with a 1-23 modifier, DAILY for 24, node + launcher q
 });
 
 test('namedJsonFiles: POSIX and Windows paths (JSON-escaped or not)', () => {
-  const out = String.raw`wrote /Users/a/result.json; also C:\\Users\\Lucy\\up\\r.json and D:/x/y.json`;
-  assert.deepEqual(namedJsonFiles(out), ['/Users/a/result.json', String.raw`C:\Users\Lucy\up\r.json`, 'D:/x/y.json']);
+  const out = String.raw`wrote /tmp/out/result.json; also C:\\work\\up\\r.json and D:/x/y.json`;
+  assert.deepEqual(namedJsonFiles(out), ['/tmp/out/result.json', String.raw`C:\work\up\r.json`, 'D:/x/y.json']);
 });
