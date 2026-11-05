@@ -27,6 +27,7 @@
 //    node srlink.cjs match                       fill readers' missing handles from their comments
 //    node srlink.cjs claim <postId> <personId> <platform> <handle>
 //    node srlink.cjs log [N]                     last N server requests (~/.srlink/logs)
+//    node srlink.cjs clipboard                   print the clipboard (macOS, Windows, Linux)
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -35,8 +36,8 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { execFile } = require('child_process');
 const log = require('./log.cjs');
+const { openUrl, clipboard } = require('./platform.cjs');
 
 const DIR = process.env.SRLINK_HOME || path.join(os.homedir(), '.srlink');
 const CONFIG = path.join(DIR, 'config.json');
@@ -149,7 +150,7 @@ async function login(lang, name, url) {
   if (!start.ok) throw new Error(`login start failed: ${start.status} ${JSON.stringify(start.data)}`);
   const s = start.data;
   console.log(`\nOpen this link and approve:\n  ${s.verification_uri_complete}\n\nCode: ${s.user_code}\n`);
-  if (process.platform === 'darwin') execFile('open', [s.verification_uri_complete], () => {});
+  openUrl(s.verification_uri_complete);
   const deadline = Date.now() + s.expires_in * 1000;
   while (Date.now() < deadline) {
     await sleep(s.interval * 1000);
@@ -314,7 +315,8 @@ async function main() {
   if (cmd === 'match') return require('./match.cjs').run(rest);
   if (cmd === 'claim') return require('./match.cjs').run(['claim', ...f._]);
   if (cmd === 'log') return console.log(log.tail(Number(f._[0]) || 20));
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log');
+  if (cmd === 'clipboard') return console.log(clipboard());
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard');
 }
 
 module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };

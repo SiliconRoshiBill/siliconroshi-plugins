@@ -86,12 +86,19 @@ function findRecord(node, url, depth = 0) {
   return null;
 }
 
+/* .json paths named in the output: /posix/paths and C:\\windows\\paths
+ * (whose backslashes arrive doubled, JSON-escaped). */
+function namedJsonFiles(outputText) {
+  return (outputText.match(/(?:[A-Za-z]:(?:\\{1,2}|\/)|\/)[^\s"'<>|*?]+?\.json\b/g) || [])
+    .map((f) => f.replace(/\\\\/g, '\\'));
+}
+
 /* Uploaders often print only "wrote result.json": append the contents
  * of up to 5 small .json files the output names, so links and records
  * inside them are seen too. */
 function withNamedFiles(outputText) {
   let text = outputText;
-  for (const file of (outputText.match(/\/[^\s"'\\]+\.json\b/g) || []).slice(0, 5)) {
+  for (const file of namedJsonFiles(outputText).slice(0, 5)) {
     try {
       if (fs.statSync(file).size < 200000) text += '\n' + fs.readFileSync(file, 'utf8');
     } catch { /* missing or unreadable */ }
@@ -197,14 +204,14 @@ async function handle(event) {
       `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" --publish-at <when it went or goes public> --link <platform>=<url>. ` +
       'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.' +
       (ask.some(needsShareLink)
-        ? ' Rednote: that bare note URL is blocked for other viewers, so do not register it. Get the share link first: open the note in Chrome from the user\'s profile, click the share arrow, click Copy Link, read it with `pbpaste`, and register that URL.'
+        ? ' Rednote: that bare note URL is blocked for other viewers, so do not register it. Get the share link first: open the note in Chrome from the user\'s profile, click the share arrow, click Copy Link, read it with `node "${cli}" clipboard`, and register that URL.'
         : ''),
     );
   }
   return notes.join('\n');
 }
 
-module.exports = { detectPosts, recordFor, withNamedFiles, handle, shareNote, POST_PATTERNS };
+module.exports = { detectPosts, recordFor, withNamedFiles, namedJsonFiles, handle, shareNote, POST_PATTERNS };
 
 if (require.main === module) {
   let raw = '';

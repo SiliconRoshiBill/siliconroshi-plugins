@@ -4,7 +4,7 @@
 //    node sync.cjs [--quiet]          check once now
 //    node sync.cjs schedule on [H]    run it every H hours (1-24,
 //                                     default 1) on this computer
-//    node sync.cjs schedule off|status       (launchd / crontab)
+//    node sync.cjs schedule off|status       (launchd / Task Scheduler / crontab)
 //
 //  Reads the channel's public RSS feed (no Chrome, no Claude), takes
 //  the newest SYNC_MAX videos of the last SYNC_DAYS, and registers
@@ -120,6 +120,11 @@ const found = [
   newest(path.join(home, '.codex/plugins/cache/siliconroshi/srlink')),
   geminiVersion && { version: geminiVersion, file: path.join(gemini, SCRIPT) },
 ].filter((c) => c && fs.existsSync(c.file)).sort((a, b) => newer(a.version, b.version));
+/* Task Scheduler has no stdout redirect: --log appends output here instead. */
+if (process.argv.includes('--log')) {
+  const out = (...a) => fs.appendFileSync(${JSON.stringify(LOG)}, a.join(' ') + '\\n');
+  console.log = out; console.error = out;
+}
 require(found.length ? found.pop().file : ${JSON.stringify(__filename)}).run(['--quiet']);
 `;
 
@@ -143,37 +148,71 @@ const setCrontab = (text) => execFileSync('crontab', ['-'], { input: text });
 
 const every = (h) => (h === 1 ? 'every hour' : `every ${h} hours`);
 
-function schedulePlatform(on, hours) {
-  const uid = String(process.getuid?.() ?? '');
-  if (process.platform === 'darwin') {
-    try { execFileSync('launchctl', ['bootout', `gui/${uid}`, PLIST], { stdio: 'ignore' }); } catch { /* not loaded */ }
-    if (!on) return fs.rmSync(PLIST, { force: true });
-    fs.mkdirSync(path.dirname(PLIST), { recursive: true });
-    fs.writeFileSync(PLIST, plistXml(hours));
-    return execFileSync('launchctl', ['bootstrap', `gui/${uid}`, PLIST]);
-  }
+const TASK = 'SRlink sync';
+const schtasks = (args) => execFileSync('schtasks', args, { stdio: 'ignore' });
+const succeeds = (fn) => { try { fn(); return true; } catch { return false; } };
+
+/* schtasks: HOURLY takes a modifier 1-23, so 24 hours is DAILY. */
+const windowsTaskArgs = (hours) => [
+  '/Create', '/F', '/TN', TASK,
+  ...(hours === 24 ? ['/SC', 'DAILY'] : ['/SC', 'HOURLY', '/MO', String(hours)]),
+  '/TR', `"${process.execPath}" "${LAUNCHER}" --log`,
+];
+
+/* One row per operating system: install every H hours, remove, is it there. */
+const SCHEDULERS = {
+  darwin: {
+    off() {
+      const uid = String(process.getuid());
+      try { execFileSync('launchctl', ['bootout', `gui/${uid}`, PLIST], { stdio: 'ignore' }); } catch { /* not loaded */ }
+      fs.rmSync(PLIST, { force: true });
+    },
+    on(hours) {
+      this.off();
+      fs.mkdirSync(path.dirname(PLIST), { recursive: true });
+      fs.writeFileSync(PLIST, plistXml(hours));
+      execFileSync('launchctl', ['bootstrap', `gui/${process.getuid()}`, PLIST]);
+    },
+    installed: () => fs.existsSync(PLIST),
+  },
   /* Cron hour step H: H=1 every hour, H=24 once a day at 00:17. */
-  const kept = crontab().split('\n').filter((l) => l && !l.includes(CRON_MARK));
-  if (on) kept.push(`17 */${hours} * * * "${process.execPath}" "${LAUNCHER}" >> "${LOG}" 2>&1 ${CRON_MARK}`);
-  setCrontab(kept.join('\n') + '\n');
-}
+  linux: {
+    off: () => setCrontab(crontab().split('\n').filter((l) => l && !l.includes(CRON_MARK)).join('\n') + '\n'),
+    on(hours) {
+      const kept = crontab().split('\n').filter((l) => l && !l.includes(CRON_MARK));
+      kept.push(`17 */${hours} * * * "${process.execPath}" "${LAUNCHER}" >> "${LOG}" 2>&1 ${CRON_MARK}`);
+      setCrontab(kept.join('\n') + '\n');
+    },
+    installed: () => crontab().includes(CRON_MARK),
+  },
+  /* Task Scheduler; /Run starts the first check now, like launchd's RunAtLoad. */
+  win32: {
+    off: () => succeeds(() => schtasks(['/Delete', '/F', '/TN', TASK])),
+    on(hours) {
+      schtasks(windowsTaskArgs(hours));
+      succeeds(() => schtasks(['/Run', '/TN', TASK]));
+    },
+    installed: () => succeeds(() => schtasks(['/Query', '/TN', TASK])),
+  },
+};
+const scheduler = () => SCHEDULERS[process.platform];
 
 /* Installs from before 0.1.10 ran hourly without saving scheduleHours. */
-const scheduledHours = () => loadConfig().scheduleHours
-  || (fs.existsSync(PLIST) || crontab().includes(CRON_MARK) ? 1 : 0);
+const scheduledHours = () => loadConfig().scheduleHours || (scheduler()?.installed() ? 1 : 0);
 
 function schedule(mode, h) {
   const now = scheduledHours();
   if (mode === 'status') return now ? `Background check on, ${every(now)}. Log: ${LOG}` : 'Background check off.';
   if (mode !== 'on' && mode !== 'off') return 'Use: schedule on [hours 1-24] | off | status';
-  if (!['darwin', 'linux'].includes(process.platform)) return 'The background check runs on macOS and Linux; run `node sync.cjs` yourself elsewhere.';
+  const sched = scheduler();
+  if (!sched) return `The background check runs on macOS, Windows and Linux, not ${process.platform}; run \`node sync.cjs\` yourself.`;
   const hours = h === undefined ? (now || 1) : Number(h);
   if (mode === 'on' && !(Number.isInteger(hours) && hours >= 1 && hours <= 24)) return 'Hours must be a whole number from 1 to 24.';
   if (mode === 'on') {
     fs.mkdirSync(DIR, { recursive: true, mode: 0o700 });
     fs.writeFileSync(LAUNCHER, LAUNCHER_SRC);
   }
-  schedulePlatform(mode === 'on', hours);
+  if (mode === 'on') sched.on(hours); else sched.off();
   const { scheduleHours, ...rest } = loadConfig();
   saveConfig(mode === 'on' ? { ...rest, scheduleHours: hours } : rest);
   return mode === 'on' ? `Background check on, ${every(hours)}. Log: ${LOG}` : 'Background check off.';
@@ -212,6 +251,6 @@ async function run(argv) {
   }
 }
 
-module.exports = { LAUNCHER_SRC, parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
+module.exports = { LAUNCHER_SRC, windowsTaskArgs, SCHEDULERS, parseFeed, summaryOf, cleanTitle, schedule, scheduledHours, plistXml, syncYouTube, run };
 
 if (require.main === module) run(process.argv.slice(2));
