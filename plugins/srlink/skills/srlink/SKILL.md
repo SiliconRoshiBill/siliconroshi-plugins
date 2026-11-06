@@ -1,82 +1,68 @@
 ---
 name: srlink
-description: SRlink, SiliconRoshi's member network, from Claude Code, Codex or Gemini CLI. Log in once; publish posts to YouTube, Rednote, X, TikTok, Instagram and Reddit through the user's Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote / TikTok / Instagram / Reddit / Reddit", "share to SRlink", "SRfeed", "check comments", or right after the user publishes a post anywhere.
+description: SRlink, SiliconRoshi's member network, from any AI that loads skills (Claude Code, Codex, Gemini CLI, Cursor, Copilot, WorkBuddy, Grok and more). Log in once; publish posts to YouTube, Rednote, X, TikTok, Instagram and Reddit through the user's Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote / TikTok / Instagram / Reddit", "share to SRlink", "SRfeed", "check comments", "install SRlink in Cursor / another AI", or right after the user publishes a post anywhere.
 ---
 
 # SRlink
 
-Script: `scripts/srlink.cjs` in this skill's own folder, next to this SKILL.md: run `node <skill folder>/scripts/srlink.cjs <command>` (below: `srlink <command>`). In Claude Code the folder is `${CLAUDE_PLUGIN_ROOT}/skills/srlink`; in Codex and Gemini CLI use the folder this skill was loaded from. The skill works the same in Claude Code, Codex and Gemini CLI, and they share one login and config in `~/.srlink/`.
+Script: `scripts/srlink.cjs` in this skill's own folder, next to this SKILL.md: run `node <skill folder>/scripts/srlink.cjs <command>` (below: `srlink <command>`). In Claude Code the folder is `${CLAUDE_PLUGIN_ROOT}/skills/srlink`; in every other AI use the folder this skill was loaded from (for AIs set up by `srlink setup` that is `~/.srlink/skill`). Node 18+, no dependencies. Every AI on the computer shares one login and config in `~/.srlink/`.
+
+Before acting, say "using the srlink skill". These rules hold for the whole session.
+
+## What the user wants → what you do
+
+Read the reference named in the last column before the first command of that kind; each one holds the exact steps.
+
+| The user says | You run | Read |
+|---|---|---|
+| "log in to SRlink", set it up | `srlink login`, then `srlink handles ...` | [setup](references/setup.md) |
+| publish / post this to YouTube, Rednote, X ... | their own posting skill, or the built-in Chrome flow; then `srlink share` | [publish](references/publish.md) |
+| "share to SRlink", register a post | `srlink share --title ... --summary ... --publish-at ... --link <platform>=<url>`, then `srlink mine` | [publish](references/publish.md) |
+| SRfeed, comment on members' posts | `srlink feed` → user picks a draft → `srlink mark` | [feed](references/feed.md) |
+| "check comments", who supported me | `srlink mine` → read in Chrome → `srlink observed` | [feed](references/feed.md) |
+| sync my posts, background check, session scan | `srlink sync`, `srlink schedule`, `srlink scan`, `srlink match` | [automation](references/automation.md) |
+| "is it on SRlink?", something went wrong | `srlink mine`, then `srlink log 20` | [log](references/log.md) |
+| status | `srlink status` (login, auto-share, background check) and `srlink skill` (which AIs have it) | — |
+| install in Cursor / Copilot / WorkBuddy / Grok / another AI | `srlink setup`; for an AI not found: `srlink skill link <its skills folder>` | — |
+| update | `srlink update` (plugin installs: the plugin manager updates it) | — |
+| uninstall | `srlink skill remove --dry-run`, show it, then `srlink skill remove` once they agree; `srlink schedule off` and `srlink logout` only if they ask | — |
+
+After `srlink setup` or `srlink update`, show the report it prints to the user as is: no additions, no reordering.
 
 ## Ground rules
 
 - Act only in the user's own logged-in browser and only when the user asks. Never store social-platform passwords, cookies or tokens (the only thing kept is the SRlink token in `~/.srlink/config.json`); stop and ask at any login, 2FA, captcha or rate-limit prompt, and never retry around a platform block.
 - Every publish needs an explicit "publish" (or the same word in the user's language) from the user for that one post. Show the exact final text, title, platform and media first; re-show after any edit. No batch publishing, no unattended publishing.
 - Comments and likes: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. Like only when the user approves the like for that post (default yes, shown next to the comment preview); never like comments; skip if already liked.
-- Browser work (publishing, reading comments, checking a Rednote / LinkedIn / X / TikTok / Instagram / Reddit post) uses a tool that drives the user's own logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. If no such tool is available, say so and ask the user to open the page and paste what you need.
-- Share only the user's own PUBLIC posts to SRlink. Never register an unlisted or private video (class recordings, member-only lessons), even if the user owns it. Never print the token or `~/.srlink/config.json`.
+- Browser work (publishing, reading comments, checking a Rednote / LinkedIn / X / TikTok / Instagram / Reddit post) uses a tool that drives the user's own logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex, the AI's own browser tool elsewhere. If no such tool is available, say so and ask the user to open the page and paste what you need.
+- Share only the user's own PUBLIC posts to SRlink. Never register an unlisted or private video (class recordings, member-only lessons), even if the user owns it. Never register a post someone else made, even one the user only searched for or opened. Never print the token or `~/.srlink/config.json`.
 - Dates and times: when telling the user a date or time, use the local value the CLI printed (`posted_at_local` in `feed`/`mine`: when the post went public on its platform, or `status`'s plain text) — never UTC and never a raw ISO string. A `--publish-at` with no timezone offset is read as the user's own local time and sent to the server as an absolute UTC instant.
+- Never tell the user a post is on SRlink from memory or from a hook note alone: `srlink mine` must show the card.
 
-## Setup (once per computer)
+## Results and errors
 
-1. `srlink login` — prints a link and a code and opens the browser; the user signs in to siliconroshi.ai and clicks Authorize. (`--url <site>` logs in to a test site instead of production.)
-2. `srlink handles --rednote <name> --youtube @<name> [--linkedin <name>] [--x <name>] [--tiktok @<name>] [--instagram <name>] [--reddit u/<name>]` — the user's own account names, so other members' monitoring can verify their support. Also editable on SRlink → Mine.
-3. Auto-share is on by default once the user is logged in: the plugin's PostToolUse hook registers posts the user publishes with any skill. Tell the user once that it is on and that `srlink auto-share off` turns it off.
-4. The background YouTube check is on by default too: login (and, for users logged in before, the next session start) turns it on every hour (macOS launchd, Windows Task Scheduler, Linux crontab) and prints one line saying so. Relay that line once. It runs without Claude open and only reads the channel's public feed. `srlink schedule on 3` changes it to every 3 hours, `srlink schedule status` shows it, `srlink schedule off` stops it for good (it is never turned back on automatically after that).
-5. Ask the user once: "Should the background check also scan the Claude sessions on this computer for posts you published, and register them? Read on this computer only; only post links are kept." On yes: `srlink scan on` (it runs inside the background check, so `schedule on` must be on too). YouTube posts are checked and registered without a browser; Rednote, LinkedIn, X, TikTok, Instagram and Reddit ones are handed to Claude at the next session start (see section 5).
-6. `srlink status` to confirm.
+Commands print JSON (`share`, `feed`, `mine`, `mark`, `observed`, `handles`) or plain lines. On failure they print one line and exit 1; branch on it:
 
-## 1. Publish
+| The line says | What to do |
+|---|---|
+| `Not logged in to SRlink` / `... failed: 401 unauthorized` | `srlink login`; the user approves in the browser themselves. Then repeat the command once |
+| `Login denied` / `Code expired` / `Timed out waiting` | Tell the user; run `srlink login` again only if they want to |
+| `share failed: 429 monthly_limit` | Free users get 1 share a month. Say so and mention a membership; do not retry |
+| `... failed: 429 rate_limited` | Wait a minute, then try once more; never loop |
+| `share failed: 400 bad_title / bad_summary / bad_links / bad_publish_at / bad_url` | Fix that argument (see [publish](references/publish.md)) and run again |
+| `... failed: 404 not_found / not_your_post` | Wrong post id or link: check `srlink mine` / `srlink feed` |
+| `... failed: 503 unavailable`, `fetch failed` | SRlink is unreachable. Tell the user, show `srlink log 5`; do not retry in a loop |
+| `could not find the YouTube channel for ...` | The saved YouTube handle is wrong: `srlink handles --youtube @<name>` |
+| `reading the clipboard is not supported` | Ask the user to paste the link |
 
-**If the user has their own posting skill (ytupload, a Rednote skill, anything): use it.** Do not re-post.
+A `share` reply is read, not assumed: `{"id":N}` new card, `"merged":true` added to a card, `"existing":true` already there, `"existing":true,"deleted":true` the user deleted it before and it was NOT registered.
 
-**If not, use the built-in flow (YouTube, Rednote, X, TikTok, Instagram, Reddit):**
-1. Collect platform(s), title, body, media paths, and a publish time if scheduled.
-2. Load the Chrome tools in one ToolSearch call (tabs_context, tabs_create, navigate, computer, find, form_input, read_page, get_page_text).
-3. Per platform, in a new tab: YouTube Studio (studio.youtube.com → Create → Upload), Rednote creator center (creator.rednote.com or creator.xiaohongshu.com → Publish Note), X (x.com/compose/post; to attach someone else's video with credit, end the text with their `.../status/<id>/video/1` link), TikTok (tiktok.com/tiktokstudio/upload), Instagram (instagram.com → Create → Post), or Reddit (reddit.com/submit; ask which subreddit, and follow that subreddit's rules). Fill the fields, screenshot the final state, show it, wait for the user's "publish", then click publish.
-4. Read the resulting post URL from the page (YouTube: the video link in the done dialog; Rednote: the note in Note Management; X: the newest post's timestamp link on x.com/<handle>; TikTok: the newest video on tiktok.com/@<handle>; Instagram: the newest post or reel on instagram.com/<handle>; Reddit: the post's own page right after submitting, reddit.com/r/<sub>/comments/<id>/...).
+## Hook notes (plugin installs only)
 
-**Last step of every publish, whichever skill or tool posted it: register on SRlink.** If a hook note "Registered on SRlink: ..." already appeared for that URL, just relay it. Otherwise run `srlink share` (section 2) yourself with the title just published, then `srlink mine` to confirm the card, and report the post URL and the SRlink result. A publish is not done until this step is.
+Where SRlink is installed as a plugin (Claude Code, Codex, Gemini CLI) a hook watches tool output; it is on by default and `srlink auto-share off` turns it off. "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published that post themselves, with the title just used; ignore links you only searched for or opened. AIs that load only the skill get no hook notes: register every publish yourself as its last step.
 
-## 2. Register on SRlink
+## Red lines
 
-`srlink share --title "<title>" --summary "<3-5 sentences>" [--publish-at <WHEN>] --link rednote=<url> [--link youtube=<url> ...]`
-- Summary: always 3-5 sentences, written from the post's own text (description, caption, script): what it covers, who it is for, what a reader takes away. Never invent facts that are not in the post. Other members' AI comment drafts are written from it.
-- Rednote links: register the note's share link, never a bare `.../explore/<id>` or `.../discovery/item/<id>` (blocked for other viewers). In Chrome: open the note from the user's profile, click the share arrow, click Copy Link, read it with `srlink clipboard` (works on macOS, Windows and Linux; a `rednote.com/discovery/item/<id>?...xsec_token=...` URL). In the app: Share → Copy Link (an `xhslink.com/...` link).
-- Same title within 7 days adds the platform to the existing card. Always pass `--publish-at` with the time the post went (or goes) public on its platform: a future time schedules it (SRfeed shows it from then); a past time is the date its card shows. Registering an older post without it makes the card show today's date. Read the time from the platform (YouTube: the watch page's publish date; Rednote: Note Management shows Beijing time). `<WHEN>` can be plain local time ("2026-11-01T19:00:00", no offset) — read as the user's own timezone and converted to UTC before sending — or an ISO string that already carries an offset/`Z`.
-- Read the reply, do not assume: `{"id":N}` = new card; `"merged":true` = added to an existing card; `"existing":true` = already on SRlink, nothing added; `"existing":true,"deleted":true` = the user deleted it from SRlink earlier, NOT registered. Then `srlink mine` to confirm.
-- Free users: 1 share a month (on `monthly_limit`, say so and mention upgrading to a membership). Members: no limit.
-- Hook notes: "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published it, with the title just used; ignore links you only opened.
-- The hook (on by default; off after `srlink auto-share off`) runs after shell commands and every MCP tool, browser tools included (Claude Code and Codex: `hooks/hooks.json`; Gemini CLI: the extension's own `hooks/hooks.json`). On Chrome pages it also spots bare X paths like `/<handle>/status/<id>`, but only for the user's own X handle saved via `srlink handles` (re-run `srlink handles` once to cache it locally).
-
-## 3. Comment on members' posts
-
-1. `srlink feed` → the 10 newest posts you have not commented on, with `links`, `drafts`, `liked`, `mine`.
-2. Show the user posts that are not `mine` and not commented, with their drafts. Each draft is one or two sentences.
-   Posts that are `mine` carry drafts too: a pinned first comment for the author (a question that invites replies, or one tip). Offer them right after a publish; never `mark` your own post.
-3. The user picks a draft (edited or not). Right away, without asking the user to confirm anything: `srlink mark <postId> commented --text "<the final comment>"` and `srlink mark <postId> liked`, the same as clicking a draft on the website. Then the user posts it on the original post, or asks you to post that one comment in Chrome (per the ground rules). Never ask the user to report back that they posted it.
-4. `mark <postId> skipped` hides an irrelevant post when the user says to skip it. If the user changes their mind, `mark <postId> commented --off`.
-
-## 4. Monitor my posts (verify support)
-
-Run when the user asks ("check comments", "who supported me"), or daily if they set up a schedule.
-1. `srlink mine` → the user's posts of the last 10 days with their links.
-2. For each link, open it in Chrome and read the commenters' account names (and likers, where the platform lists them), with times if shown.
-3. Report per link: `srlink observed --url <link> --platform <rednote|youtube|linkedin|x|tiktok|instagram|reddit> --comment "<name>@<ISO time>" ... --like "<name>" ...`
-4. Tell the user who was verified (`matched`) and how many other commenters there were. Suggest replies to new comments if they want.
-
-Privacy: the server keeps only commenters who are SRlink members (matched by their account names); everyone else is counted and dropped. Do not keep comment text or other people's names anywhere else.
-
-## 5. My new posts (automatic for YouTube)
-
-- `srlink sync` registers the newest (up to 10, last 30 days) videos of the user's YouTube channel that SRlink has not seen: title without hashtags, a 3-5 sentence summary from the description, the YouTube publish time. `srlink schedule on [H]` runs it in the background every H hours (1-24, default 1). A video already registered, or one the user deleted on SRlink, is never registered again.
-- Rednote, LinkedIn, X, TikTok, Instagram and Reddit have no public feed. When the user asks ("sync my posts"), open their profile in Chrome, take the newest posts, and register the ones not in `srlink mine` with `srlink share` (Rednote: the Copy Link share URL, see section 2).
-- Session scan (`srlink scan on`): each background run also reads this computer's Claude Code session files changed since the last run (the first run: the past 24 hours) for post links (local only; nothing but the links leaves). A YouTube video is checked with YouTube's public oEmbed: the user's own, published in the last 30 days -> registered. Rednote / LinkedIn / X / TikTok / Instagram / Reddit links wait as candidates (`srlink scan list`); at session start the plugin asks Claude to open each in Chrome, check the author, and either register it (`srlink share`, then `srlink scan mark <url> registered`) or `srlink scan mark <url> not-mine|old`.
-- Missing handles (`srlink match`, also in each background run): when a member comments on the user's post through the SRlink feed, SRlink keeps that comment's text. If the member has no account name on that platform, YouTube comments are read without a browser, the matching comment's writer is reported (`srlink claim <postId> <personId> <platform> <handle>`), and the member's handle is filled in and the comment marked verified. Rednote / LinkedIn / X / TikTok / Instagram / Reddit ones are handed to Claude at session start to find in Chrome. The server refuses a handle someone already uses; never claim the user's own account for a member.
-
-
-## 6. Did it reach SRlink? (the log)
-
-Every request to the SRlink server is written to `~/.srlink/logs/YYYY-MM-DD.jsonl` (kept 14 days; tokens never written): when, which entry point (`srlink share`, `hook`, `run-sync`...), what was sent, the status and the reply. `srlink log [N]` prints the last N in plain words.
-
-- Never tell the user a post is on SRlink from memory or from a hook note alone: `srlink mine` must show the card. If it does not, `srlink log 20` shows whether the share was ever sent and what the server answered; show the user that row.
-- When the user reports a problem to SiliconRoshi, the request id in brackets (`[c10d8658]`) is what the server's logs are searched by.
+- Never publish, comment or like without the user's approval of that one item.
+- Never log in to a platform for the user, never ask for or print a password, cookie or the SRlink token.
+- Never register someone else's post or a non-public video on SRlink.

@@ -1,6 +1,6 @@
 # SiliconRoshi Plugins
 
-One plugin marketplace for every SiliconRoshi plugin. Add it once, then install any plugin from it by name. It works in Claude Code and Codex; `srlink` also installs in Gemini CLI.
+One plugin marketplace for every SiliconRoshi plugin. Add it once, then install any plugin from it by name. It works in Claude Code and Codex; `srlink` also installs in Gemini CLI, and as a skill in Cursor, GitHub Copilot, WorkBuddy, Grok, Windsurf and OpenCode.
 
 Site: https://www.siliconroshi.ai
 
@@ -42,6 +42,23 @@ gemini extensions install https://github.com/SiliconRoshiBill/siliconroshi-plugi
 ```
 
 This installs the `srlink` extension (`gemini-extension.json`, `hooks/` and `skills/` at the repo root). Open a new Gemini CLI session afterwards.
+
+### Cursor, Copilot, WorkBuddy, Grok and other AIs (srlink)
+
+Tell your AI:
+
+```
+Install SRlink: https://raw.githubusercontent.com/SiliconRoshiBill/siliconroshi-plugins/main/install.md
+```
+
+Or yourself:
+
+```bash
+git clone --depth 1 https://github.com/SiliconRoshiBill/siliconroshi-plugins.git ~/.srlink/src
+node ~/.srlink/src/skills/srlink/scripts/srlink.cjs setup
+```
+
+`setup` keeps one copy of the skill in `~/.srlink/skill` and links it into every AI it finds (`~/.cursor/skills`, `~/.copilot/skills`, `~/.workbuddy/skills`, `~/.grok/skills`, ...). AIs that already have the plugin keep the plugin. `srlink skill` shows where it is installed; `srlink update` updates it.
 
 ## Plugins
 

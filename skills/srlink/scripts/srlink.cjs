@@ -1,5 +1,6 @@
 // ============================================================
-//  srlink — SRlink from Claude Code, Codex or Gemini CLI.
+//  srlink — SRlink from any AI with skills (Claude Code, Codex,
+//  Gemini CLI, Cursor, Copilot, WorkBuddy, Grok ...).
 //
 //  Login works like `wrangler login`: the terminal shows a code
 //  and a link; you approve in the browser; a token is saved to
@@ -28,6 +29,8 @@
 //    node srlink.cjs claim <postId> <personId> <platform> <handle>
 //    node srlink.cjs log [N]                     last N server requests (~/.srlink/logs)
 //    node srlink.cjs clipboard                   print the clipboard (macOS, Windows, Linux)
+//    node srlink.cjs setup | update              install the skill in every AI here (install.cjs)
+//    node srlink.cjs skill [link <folder> | remove [--dry-run]]
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
 //  else https://www.siliconroshi.ai. Log in again to switch.
@@ -317,7 +320,9 @@ async function main() {
   if (cmd === 'claim') return require('./match.cjs').run(['claim', ...f._]);
   if (cmd === 'log') return console.log(log.tail(Number(f._[0]) || 20));
   if (cmd === 'clipboard') return console.log(clipboard());
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard');
+  if (cmd === 'setup' || cmd === 'update') return console.log(require('./install.cjs').run([cmd]));
+  if (cmd === 'skill') return console.log(require('./install.cjs').run(rest));
+  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
 module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };

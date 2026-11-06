@@ -1,4 +1,4 @@
-# SRlink Plugin for Claude Code, Codex and Gemini CLI
+# SRlink Plugin for Claude Code, Codex, Gemini CLI and any AI with skills
 
 Part of the SiliconRoshi plugin marketplace (`SiliconRoshiBill/siliconroshi-plugins`). If you already added that marketplace, `/plugin install srlink@siliconroshi` is all you need.
 
@@ -34,10 +34,20 @@ gemini extensions install https://github.com/SiliconRoshiBill/siliconroshi-plugi
 
 Open a new session in that agent afterwards.
 
+Cursor, GitHub Copilot, WorkBuddy, Grok, Windsurf, OpenCode (skill only, no hook):
+
+```bash
+git clone --depth 1 https://github.com/SiliconRoshiBill/siliconroshi-plugins.git ~/.srlink/src
+node ~/.srlink/src/skills/srlink/scripts/srlink.cjs setup
+```
+
+`setup` copies the skill to `~/.srlink/skill` and links it into each AI's skills folder; AIs with the plugin keep the plugin, so the skill never shows twice. `srlink skill link <folder>` adds an AI it does not know; `srlink skill remove [--dry-run]` takes the links out. A plugin install refreshes the shared copy at each session start.
+
 What differs between agents:
 
 - Browser steps (publishing, reading comments, checking Rednote / LinkedIn / X / TikTok / Instagram / Reddit posts) need a tool that drives your logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex. Without one, the agent asks you to open the page.
 - The session scan reads Claude Code session logs only.
+- AIs with only the skill have no auto-share hook: the skill registers each post as the last publish step.
 
 ## First run
 

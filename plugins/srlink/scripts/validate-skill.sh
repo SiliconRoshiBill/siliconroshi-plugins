@@ -26,6 +26,14 @@ check "frontmatter: description" grep -qE '^description: ' "$skill"
 check "skill: script path"       grep -qF 'scripts/srlink.cjs' "$skill"
 check "skill: Claude plugin root" grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink' "$skill"
 check "skill: auto-share default on, documents off" grep -qF 'srlink auto-share off' "$skill"
+for ref in setup publish feed automation log; do
+  check "skill: references/$ref.md linked" grep -qF "references/$ref.md" "$skill"
+  check "skill: references/$ref.md exists" test -s "skills/srlink/references/$ref.md"
+done
+check "skill: lean core (<= 120 lines)" test "$(wc -l < "$skill")" -le 120
+for ai in cursor github-copilot workbuddy grok; do
+  check "install: agent table has $ai" grep -qF "['$ai'," skills/srlink/scripts/install.cjs
+done
 check "hook: uses plugin root"   grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/hook.cjs' hooks/hooks.json
 check "hook: auto-share gate"     grep -qF 'cfg.autoShare !== true' skills/srlink/scripts/hook.cjs
 check "cli: production default"  grep -qF "'https://www.siliconroshi.ai'" skills/srlink/scripts/srlink.cjs
