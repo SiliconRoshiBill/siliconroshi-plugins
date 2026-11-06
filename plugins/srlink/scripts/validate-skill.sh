@@ -36,6 +36,7 @@ for ai in cursor github-copilot workbuddy grok; do
 done
 check "hook: uses plugin root"   grep -qF '${CLAUDE_PLUGIN_ROOT}/skills/srlink/scripts/hook.cjs' hooks/hooks.json
 check "hook: auto-share gate"     grep -qF 'cfg.autoShare !== true' skills/srlink/scripts/hook.cjs
+check "comments only: no like reporting" absent '\-\-like |mark <postId> liked'
 check "cli: production default"  grep -qF "'https://www.siliconroshi.ai'" skills/srlink/scripts/srlink.cjs
 check "json: plugin.json"        node -e 'JSON.parse(require("fs").readFileSync(".claude-plugin/plugin.json"))'
 check "json: hooks.json"         node -e 'JSON.parse(require("fs").readFileSync("hooks/hooks.json"))'

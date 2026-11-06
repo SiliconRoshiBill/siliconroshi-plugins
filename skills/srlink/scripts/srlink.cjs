@@ -19,8 +19,8 @@
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME --tiktok @NAME --instagram NAME --reddit u/NAME]
-//    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...] [--like HANDLE ...]
-//    node srlink.cjs mark <postId> commented|liked|skipped [--off] [--text "the comment"]
+//    node srlink.cjs observed --url URL --platform P [--comment HANDLE[@ISO] ...]
+//    node srlink.cjs mark <postId> commented|skipped [--off] [--text "the comment"]
 //    node srlink.cjs sync                        register my new YouTube videos now
 //    node srlink.cjs schedule on [H]|off|status  ...and every H hours (1-24) here
 //    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
@@ -246,13 +246,21 @@ async function handlesCached() {
   return loadConfig().handles || handles({});
 }
 
-/* Who commented on / liked one of my posts, as read on the platform.
+/* ------------------------------------------------------------
+ * SRlink counts comments only (owner, 2026-11-06): likes cannot be
+ * tracked, so the CLI never reports, marks or prints them.
+ * ------------------------------------------------------------ */
+const LIKES_OFF = 'SRlink counts comments only; likes are not recorded';
+
+/* "<handle>@<ISO time>" -> one observed comment for the server. */
+function commentItems(comments) {
+  return comments.map((c) => { const [handle, at] = String(c).split(/@(?=\d{4}-)/); return { handle, kind: 'comment', at }; });
+}
+
+/* Who commented on one of my posts, as read on the platform.
  * The server keeps only matches to SRlink members. */
-async function observed(url, platform, comments, likes) {
-  const items = [
-    ...comments.map((c) => { const [handle, at] = String(c).split(/@(?=\d{4}-)/); return { handle, kind: 'comment', at }; }),
-    ...likes.map((h) => ({ handle: String(h), kind: 'like' })),
-  ];
+async function observed(url, platform, comments) {
+  const items = commentItems(comments);
   const r = await api('POST', '/api/srlink/observed', { url, platform: platformKey(platform), items }, authed());
   if (!r.ok) throw new Error(`observed failed: ${r.status} ${r.data.error || ''}`);
   return r.data;
@@ -261,6 +269,7 @@ async function observed(url, platform, comments, likes) {
 /* text: with 'commented', the comment the user took, so the hourly
  * match can find it on the platform and fill in the user's handle. */
 async function mark(postId, action, on, text) {
+  if (action === 'liked') return { ok: true, ignored: LIKES_OFF };
   const r = await api('POST', '/api/srlink/interact', { postId: Number(postId), action, on, ...(text ? { text } : {}) }, authed());
   if (!r.ok) throw new Error(`mark failed: ${r.status} ${r.data.error || ''}`);
   return r.data;
@@ -276,13 +285,13 @@ function autoShare(mode) {
 }
 
 function flags(argv) {
-  const out = { _: [], link: [], comment: [], like: [] };
+  const out = { _: [], link: [], comment: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (!a.startsWith('--')) { out._.push(a); continue; }
     const key = a.slice(2);
     const val = argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[++i] : true;
-    if (key === 'link' || key === 'comment' || key === 'like') out[key].push(val); else out[key] = val;
+    if (key === 'link' || key === 'comment') out[key].push(val); else out[key] = val;
   }
   return out;
 }
@@ -303,7 +312,8 @@ async function main() {
    * `posted_at_local` is for a human, in THEIR OWN timezone. */
   if (cmd === 'feed') {
     const d = await feed();
-    const posts = d.posts.map((p) => ({ ...p, posted_at_local: localTime(p.posted_at || p.created_at) }));
+    /* `liked` is dropped: the server still sends it (always false). */
+    const posts = d.posts.map(({ liked, ...p }) => ({ ...p, posted_at_local: localTime(p.posted_at || p.created_at) }));
     return console.log(JSON.stringify({ ...d, posts }, null, 2));
   }
   if (cmd === 'mine') {
@@ -311,7 +321,7 @@ async function main() {
     return console.log(JSON.stringify(posts, null, 2));
   }
   if (cmd === 'handles') return console.log(JSON.stringify(await handles(f)));
-  if (cmd === 'observed') return console.log(JSON.stringify(await observed(f.url, f.platform, f.comment, f.like)));
+  if (cmd === 'observed') return console.log(JSON.stringify(await observed(f.url, f.platform, f.comment)));
   if (cmd === 'mark') return console.log(JSON.stringify(await mark(f._[0], f._[1], f.off !== true, typeof f.text === 'string' ? f.text : undefined)));
   if (cmd === 'sync') return require('./sync.cjs').run(rest);
   if (cmd === 'schedule') return require('./sync.cjs').run(['schedule', ...rest]);
@@ -325,7 +335,7 @@ async function main() {
   throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
-module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO };
+module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
 
 if (require.main === module) {
   main().catch((err) => {

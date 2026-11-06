@@ -1,5 +1,6 @@
 // ============================================================
-//  srlink.cjs -- timezone-dependent helpers.
+//  srlink.cjs -- timezone-dependent helpers, and (at the end) the
+//  comments-only rule: the CLI never reports or marks likes.
 //
 //  Run once per machine timezone, as the owner asked:
 //    TZ=America/New_York node --test skills/srlink/scripts/srlink.test.cjs
@@ -52,4 +53,22 @@ test(`localTime: prints a UTC instant in this process's own zone (${TZ}) with a 
 
 test('localTime: unparseable input is returned as-is', () => {
   assert.equal(localTime('not-a-date'), 'not-a-date');
+});
+
+// ------------------------------------------------------------
+//  Likes are off (owner, 2026-11-06): SRlink counts comments only.
+// ------------------------------------------------------------
+const { commentItems, flags, mark, LIKES_OFF } = require('./srlink.cjs');
+
+test('observed: only comments are reported, with their time when given', () => {
+  assert.deepEqual(commentItems(['bo@2026-11-01T10:00:00Z', 'cy']), [
+    { handle: 'bo', kind: 'comment', at: '2026-11-01T10:00:00Z' },
+    { handle: 'cy', kind: 'comment', at: undefined },
+  ]);
+  assert.deepEqual(flags(['--comment', 'bo', '--like', 'cy']).comment, ['bo']);
+  assert.equal(Array.isArray(flags(['--like', 'cy']).like), false);
+});
+
+test('mark liked: answered locally, nothing sent to the server', async () => {
+  assert.deepEqual(await mark(7, 'liked', true), { ok: true, ignored: LIKES_OFF });
 });

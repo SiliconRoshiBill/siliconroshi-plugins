@@ -33,7 +33,7 @@ After `srlink setup` or `srlink update`, show the report it prints to the user a
 
 - Act only in the user's own logged-in browser and only when the user asks. Never store social-platform passwords, cookies or tokens (the only thing kept is the SRlink token in `~/.srlink/config.json`); stop and ask at any login, 2FA, captcha or rate-limit prompt, and never retry around a platform block.
 - Every publish needs an explicit "publish" (or the same word in the user's language) from the user for that one post. Show the exact final text, title, platform and media first; re-show after any edit. No batch publishing, no unattended publishing.
-- Comments and likes: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. Like only when the user approves the like for that post (default yes, shown next to the comment preview); never like comments; skip if already liked.
+- Comments: the user decides and posts each one. Help click only when the user asks for that specific comment, after they approve its final text. SRlink counts comments only: never mark, report or offer likes; like a post on its platform only if the user asks for that.
 - Browser work (publishing, reading comments, checking a Rednote / LinkedIn / X / TikTok / Instagram / Reddit post) uses a tool that drives the user's own logged-in Chrome: Claude in Chrome in Claude Code, the Chrome plugin in Codex, the AI's own browser tool elsewhere. If no such tool is available, say so and ask the user to open the page and paste what you need.
 - Share only the user's own PUBLIC posts to SRlink. Never register an unlisted or private video (class recordings, member-only lessons), even if the user owns it. Never register a post someone else made, even one the user only searched for or opened. Never print the token or `~/.srlink/config.json`.
 - Dates and times: when telling the user a date or time, use the local value the CLI printed (`posted_at_local` in `feed`/`mine`: when the post went public on its platform, or `status`'s plain text) — never UTC and never a raw ISO string. A `--publish-at` with no timezone offset is read as the user's own local time and sent to the server as an absolute UTC instant.
@@ -63,6 +63,6 @@ Where SRlink is installed as a plugin (Claude Code, Codex, Gemini CLI) a hook wa
 
 ## Red lines
 
-- Never publish, comment or like without the user's approval of that one item.
+- Never publish or comment without the user's approval of that one item.
 - Never log in to a platform for the user, never ask for or print a password, cookie or the SRlink token.
 - Never register someone else's post or a non-public video on SRlink.

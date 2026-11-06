@@ -2,7 +2,7 @@
 
 Part of the SiliconRoshi plugin marketplace (`SiliconRoshiBill/siliconroshi-plugins`). If you already added that marketplace, `/plugin install srlink@siliconroshi` is all you need.
 
-SRlink is SiliconRoshi's member network. Members register the posts they publish (YouTube, Rednote, X, LinkedIn, TikTok, Instagram, Reddit), read each other's posts in the SRfeed, and help support each other with comments and likes. This plugin lets you do all of that from Claude Code, Codex or Gemini CLI. All three share one login and settings in `~/.srlink/`.
+SRlink is SiliconRoshi's member network. Members register the posts they publish (YouTube, Rednote, X, LinkedIn, TikTok, Instagram, Reddit), read each other's posts in the SRfeed, and support each other with comments (SRlink counts comments only, 1 point each in SRscore; likes are not tracked). This plugin lets you do all of that from Claude Code, Codex or Gemini CLI. All three share one login and settings in `~/.srlink/`.
 
 It bundles:
 
@@ -74,7 +74,7 @@ On X it only counts bare `/<handle>/status/<id>` paths for your own saved handle
 
 ## Privacy
 
-- Comments and likes are written and posted by you. The agent helps click only when you ask for that specific comment or like.
+- Comments are written and posted by you. The agent helps click only when you ask for that specific comment.
 - The plugin never stores passwords or cookies for any platform. The only thing it keeps is your SRlink token in `~/.srlink/config.json`, plus a list of links it has already seen.
 - Every request to the SRlink server is logged in `~/.srlink/logs/` (what was sent, when, and the reply; kept 14 days; the token is never written). `srlink log` shows the latest ones.
 - When you check who supported your posts, the server keeps only commenters who are SRlink members; everyone else is counted and dropped.
