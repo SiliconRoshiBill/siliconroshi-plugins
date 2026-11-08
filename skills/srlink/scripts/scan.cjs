@@ -1,19 +1,17 @@
 // ============================================================
-//  scan.cjs -- find my posts in my own Claude Code sessions.
+//  scan.cjs -- find my YouTube videos in my own Claude Code sessions.
 //
 //    node scan.cjs              scan now (also part of the background run)
 //    node scan.cjs on|off       opt in / out (asked once at setup)
-//    node scan.cjs list         candidates still waiting for Claude
-//    node scan.cjs mark <url> registered|not-mine|old|not-public
 //
 //  Reads ~/.claude/projects/**/*.jsonl changed since the last scan,
-//  on this computer only, and keeps nothing but post links. Links
-//  SRlink already has are dropped (POST /api/srlink/known). Then:
-//    YouTube   checked without a browser: oEmbed says who uploaded it;
-//              mine -> registered with title, summary, publish time.
-//    others    queued as candidates; the SessionStart hook asks Claude
-//              to open each in Chrome, confirm the author is the user,
-//              read it, and register it (or mark it not-mine).
+//  on this computer only, and keeps nothing but YouTube links. Links
+//  SRlink already has are dropped (POST /api/srlink/known). A video is
+//  checked without a browser: oEmbed says who uploaded it; mine ->
+//  registered with title, summary, publish time.
+//  Other platforms are not queued any more (owner, 2026-11-08: no
+//  backfill). A post on them reaches SRlink when it is published in a
+//  session (hook.cjs), or through Submit manually on srlink.app.
 // ============================================================
 
 const fs = require('fs');
@@ -111,11 +109,12 @@ async function scan() {
   const since = cfg.lastScan ? Date.parse(cfg.lastScan) : Date.now() - FIRST_SCAN_HOURS * 3600000;
   const started = new Date().toISOString();
   const candidates = loadCandidates();
+  /* The old queue of other platforms' links is dropped (no backfill). */
+  for (const [key, c] of Object.entries(candidates)) if (c.status === 'pending') delete candidates[key];
   const fresh = new Map();
   for (const file of sessionFiles(since)) {
     for (const [key, link] of linksIn(fs.readFileSync(file, 'utf8'))) {
-      const old = candidates[key];
-      if (!old || (old.status === 'pending' && !old.url.includes('xsec_token') && link.url.includes('xsec_token'))) fresh.set(key, link);
+      if (link.platform === 'youtube' && !candidates[key]) fresh.set(key, link);
     }
   }
   const have = new Set(fresh.size ? await known([...fresh.values()].map((l) => l.url)) : []);
@@ -126,7 +125,6 @@ async function scan() {
   for (const [key, { url, platform }] of fresh) {
     const entry = (status) => { candidates[key] = { url, platform, status, seen: started }; };
     if (have.has(url)) { entry('registered'); continue; }
-    if (platform !== 'youtube') { entry('pending'); continue; }
     const v = handle ? await youtubeIfMine(url, handle).catch(() => null) : null;
     if (!v) { entry('not-mine'); continue; }
     if (v.notPublic) { entry('not-public'); continue; }
@@ -141,20 +139,7 @@ async function scan() {
   }
   saveCandidates(candidates);
   saveConfig({ ...loadConfig(), lastScan: started });
-  return { scanned: fresh.size, added, pending: pending().length, ...(failed.length ? { retryLater: failed.length, error: failed[0] } : {}) };
-}
-
-const pending = () => Object.values(loadCandidates()).filter((c) => c.status === 'pending')
-  .map(({ url, platform }) => ({ url, platform }));
-
-function mark(url, status) {
-  if (!['registered', 'not-mine', 'old', 'not-public'].includes(status)) return 'Use: mark <url> registered|not-mine|old|not-public';
-  const c = loadCandidates();
-  const key = postKey(url);
-  if (!c[key]) return `not a candidate: ${url}`;
-  c[key].status = status;
-  saveCandidates(c);
-  return `${url} -> ${status}`;
+  return { scanned: fresh.size, added, ...(failed.length ? { retryLater: failed.length, error: failed[0] } : {}) };
 }
 
 function toggle(mode) {
@@ -163,13 +148,11 @@ function toggle(mode) {
 }
 
 async function run(argv) {
-  const [cmd, a, b] = argv;
+  const [cmd] = argv;
   if (cmd === 'on' || cmd === 'off') return console.log(toggle(cmd));
-  if (cmd === 'list') return console.log(JSON.stringify(pending(), null, 2));
-  if (cmd === 'mark') return console.log(mark(a, b));
   console.log(`${new Date().toISOString()} scan ${JSON.stringify(await scan())}`);
 }
 
-module.exports = { linksIn, sameHandle, youtubePublic, pending, scan, run };
+module.exports = { linksIn, sameHandle, youtubePublic, scan, run };
 
 if (require.main === module) run(process.argv.slice(2)).catch((e) => { console.error(`scan failed: ${e.message}`); process.exit(1); });

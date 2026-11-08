@@ -10,6 +10,9 @@
 //    directly, scheduled time included.
 //  - A bare link: tell the agent, which knows the title, to share it,
 //    but only if the user just published it.
+//  - No link, but the page says a post just went out (Rednote,
+//    LinkedIn, X): the agent gets the link through the browser that
+//    published it, or asks the user (owner, 2026-11-08).
 //  Never blocks a tool; always exits 0.
 //
 //  Shipped as a plugin hook (hooks/hooks.json). Off until the user
@@ -125,6 +128,39 @@ function recordFor(outputText, url) {
   return null;
 }
 
+/* ------------------------------------------------------------
+ *  "Just published", no link in sight (owner, 2026-11-08). A tool
+ *  output on the platform's own pages says the post went out. Through
+ *  a browser tool the agent fetches the link from that browser; any
+ *  other way it asks the user. One note per platform per 10 minutes.
+ * ------------------------------------------------------------ */
+const PUBLISHED = [
+  ['rednote', /creator\.(?:xiaohongshu|rednote)\.com/, /发布成功|publish\/success/],
+  ['linkedin', /linkedin\.com/, /Post successful|Your post (?:is|was) (?:now )?(?:live|shared|published)|帖子已发布|动态已发布/],
+  ['x', /\b(?:x|twitter)\.com/, /Your post was sent|Your Tweet was sent/],
+];
+const BROWSER_TOOL = /^mcp__.*(?:chrome|browser)/i;
+const PUBLISH_QUIET_MS = 10 * 60 * 1000;
+
+function detectPublished(toolName, inputText, outputText) {
+  const hit = PUBLISHED.find(([, host, done]) => host.test(inputText + outputText) && done.test(outputText));
+  return hit ? { platform: hit[0], browser: BROWSER_TOOL.test(toolName || '') } : null;
+}
+
+const FIND_LINK = {
+  rednote: (cli) => `open Note Management in the creator center, open the new note, click the share arrow, click Copy Link, and read it with \`node "${cli}" clipboard\` (a URL with xsec_token).`,
+  linkedin: () => 'click "View post" in the confirmation, or open the newest post on the user\'s Recent activity page, and copy its URL from the address bar (.../feed/update/urn:li:...).',
+  x: () => 'open the newest post on the user\'s profile on x.com and copy its link (.../status/<id>).',
+};
+
+function publishedNote(p, cli) {
+  const get = p.browser
+    ? `It was published through the browser, so get the link yourself now: ${FIND_LINK[p.platform](cli)} If you cannot find it, ask the user for the link.`
+    : 'Ask the user for the post\'s link.';
+  return `SRlink: the page says the user just published on ${p.platform}, but no post link was seen. ${get} ` +
+    `Then register it: node "${cli}" share --title "<the title just published>" --summary "<3-5 sentences from the post's own text>" --publish-at <when it went public> --link ${p.platform}=<url>, and tell the user in one line.`;
+}
+
 const seenFile = (dir) => path.join(dir, 'seen.json');
 function loadSeen(dir) {
   try { return JSON.parse(fs.readFileSync(seenFile(dir), 'utf8')); } catch { return []; }
@@ -159,7 +195,13 @@ async function handle(event) {
   const outputText = withNamedFiles(raw.replace(/\\"/g, '"').replace(/\\n/g, '\n'));
   const seen = loadSeen(srlink.DIR);
   const posts = detectPosts(inputText, outputText, cfg.handles).filter((p) => !seen.includes(p.url));
-  if (!posts.length) return null;
+  if (!posts.length) {
+    const p = cfg.token && detectPublished(event.tool_name, inputText, outputText);
+    const key = p && `published:${p.platform}:${Math.floor(Date.now() / PUBLISH_QUIET_MS)}`;
+    if (!p || seen.includes(key)) return null;
+    saveSeen(srlink.DIR, [...seen, key]);
+    return publishedNote(p, path.join(__dirname, 'srlink.cjs'));
+  }
   if (!cfg.token) {
     saveSeen(srlink.DIR, [...seen, ...posts.map((p) => p.url)]);
     return `SRlink: new post link(s) ${posts.map((p) => p.url).join(', ')} seen, but SRlink is not logged in. Do nothing unless the user asks.`;
@@ -211,7 +253,7 @@ async function handle(event) {
   return notes.join('\n');
 }
 
-module.exports = { detectPosts, recordFor, withNamedFiles, namedJsonFiles, handle, shareNote, POST_PATTERNS };
+module.exports = { detectPosts, detectPublished, publishedNote, recordFor, withNamedFiles, namedJsonFiles, handle, shareNote, POST_PATTERNS };
 
 if (require.main === module) {
   let raw = '';

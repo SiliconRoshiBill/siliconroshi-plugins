@@ -121,3 +121,31 @@ test('handle: a failed share is not remembered as seen, so it retries next time'
   assert.ok(JSON.parse(fs.readFileSync(path.join(home, 'seen.json'))).includes(url));
   assert.equal(await hook.handle(event), null);
 });
+
+/* Owner 2026-11-08: a post that just went out with no link in sight. */
+const { detectPublished, publishedNote } = require('./hook.cjs');
+
+test('detectPublished: Rednote / LinkedIn / X success on their own pages, through the browser', () => {
+  const chrome = 'mcp__claude-in-chrome__get_page_text';
+  assert.deepEqual(detectPublished(chrome, '{}', 'Tab: https://creator.xiaohongshu.com/publish/publish 发布成功'), { platform: 'rednote', browser: true });
+  assert.deepEqual(detectPublished(chrome, '{"url":"https://www.linkedin.com/feed/"}', 'Post successful. View post'), { platform: 'linkedin', browser: true });
+  assert.deepEqual(detectPublished(chrome, '{}', 'https://x.com/home Your post was sent.'), { platform: 'x', browser: true });
+});
+
+test('detectPublished: needs both the platform page and the success words; other tools ask the user', () => {
+  assert.equal(detectPublished('mcp__claude-in-chrome__find', '{}', '发布成功'), null);
+  assert.equal(detectPublished('mcp__claude-in-chrome__find', '{}', 'https://creator.xiaohongshu.com/new/home'), null);
+  assert.equal(detectPublished('mcp__claude-in-chrome__find', '{}', 'https://www.linkedin.com/feed/ Start a post'), null);
+  assert.deepEqual(detectPublished('Bash', '{}', 'creator.xiaohongshu.com 发布成功'), { platform: 'rednote', browser: false });
+});
+
+test('publishedNote: through the browser, fetch the link (Rednote: Copy Link); otherwise ask the user', () => {
+  const viaChrome = publishedNote({ platform: 'rednote', browser: true }, '/x/srlink.cjs');
+  assert.match(viaChrome, /get the link yourself/);
+  assert.match(viaChrome, /Copy Link/);
+  assert.match(viaChrome, /ask the user for the link/);
+  assert.match(viaChrome, /share --title .* --link rednote=<url>/);
+  const other = publishedNote({ platform: 'linkedin', browser: false }, '/x/srlink.cjs');
+  assert.match(other, /Ask the user for the post's link/);
+  assert.doesNotMatch(other, /get the link yourself/);
+});

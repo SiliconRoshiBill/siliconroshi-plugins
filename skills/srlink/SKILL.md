@@ -59,7 +59,7 @@ A `share` reply is read, not assumed: `{"id":N}` new card, `"merged":true` added
 
 ## Hook notes (plugin installs only)
 
-Where SRlink is installed as a plugin (Claude Code, Codex, Gemini CLI) a hook watches tool output; it is on by default and `srlink auto-share off` turns it off. "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published that post themselves, with the title just used; ignore links you only searched for or opened. AIs that load only the skill get no hook notes: register every publish yourself as its last step.
+Where SRlink is installed as a plugin (Claude Code, Codex, Gemini CLI) a hook watches tool output; it is on by default and `srlink auto-share off` turns it off. "Registered on SRlink: ..." → tell the user in one line. "New post link(s) ..." → share only if the user just published that post themselves, with the title just used; ignore links you only searched for or opened. "...just published on ..., but no post link was seen" → get the link through the browser that published it, or ask the user, then share. AIs that load only the skill get no hook notes: register every publish yourself as its last step.
 
 ## Red lines
 

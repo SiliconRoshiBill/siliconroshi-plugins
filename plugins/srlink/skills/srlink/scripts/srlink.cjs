@@ -23,7 +23,7 @@
 //    node srlink.cjs mark <postId> commented|skipped [--off] [--text "the comment"]
 //    node srlink.cjs sync                        register my new YouTube videos now
 //    node srlink.cjs schedule on [H]|off|status  ...and every H hours (1-24) here
-//    node srlink.cjs scan [on|off|list|mark URL registered|not-mine]
+//    node srlink.cjs scan [on|off]
 //                                                my posts found in my Claude sessions
 //    node srlink.cjs match                       fill readers' missing handles from their comments
 //    node srlink.cjs claim <postId> <personId> <platform> <handle>
