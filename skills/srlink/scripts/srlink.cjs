@@ -197,16 +197,32 @@ async function status() {
 
 /* links: [{ platform, url }]; platform names may be aliases (rednote, twitter...).
  * publishAt: ISO time for scheduled posts; SRfeed shows them from then on. */
-async function share({ title, summary, links, publishAt }) {
+/* url "pending": a scheduled post on a platform that gives no link
+ * until it goes out (LinkedIn, X, Rednote ...); needs a future
+ * publishAt. into: add the links to that card of mine (fills a
+ * pending link once the post is out). */
+async function share({ title, summary, links, publishAt, into }) {
   const body = {
     title: String(title || '').trim().slice(0, 150),
     summary: summary ? String(summary).trim().slice(0, 600) : '',
     links: (links || []).map((l) => ({ platform: platformKey(l.platform), url: l.url })),
     publish_at: toAbsoluteISO(publishAt) || undefined,
+    ...(into ? { into: Number(into) } : {}),
   };
   const r = await api('POST', '/api/srlink/posts', body, authed());
   if (!r.ok) throw new Error(`share failed: ${r.status} ${r.data.error || ''}`);
   return r.data;
+}
+
+/* My scheduled posts that went out with a link still pending; kept in
+ * ~/.srlink/due.json for the hook (owner, 2026-11-17). */
+const DUE_FILE = path.join(DIR, 'due.json');
+async function due() {
+  const r = await api('GET', '/api/srlink/due', null, authed());
+  if (!r.ok) throw new Error(`due failed: ${r.status} ${r.data.error || ''}`);
+  const out = { checked_at: new Date().toISOString(), due: r.data.due || [] };
+  fs.writeFileSync(DUE_FILE, JSON.stringify(out), { mode: 0o600 });
+  return out;
 }
 
 async function feed() {
@@ -304,7 +320,13 @@ async function main() {
   if (cmd === 'status') return console.log(await status());
   if (cmd === 'share') {
     const links = f.link.map((s) => ({ platform: s.split('=')[0], url: s.slice(s.indexOf('=') + 1) }));
-    return console.log(JSON.stringify(await share({ title: f.title, summary: f.summary, links, publishAt: f['publish-at'] })));
+    const r = await share({ title: f.title, summary: f.summary, links, publishAt: f['publish-at'], into: f.into });
+    if (f.into) await due().catch(() => null);   /* the filled post leaves due.json now */
+    return console.log(JSON.stringify(r));
+  }
+  if (cmd === 'due') {
+    const d = await due();
+    return console.log(JSON.stringify(d.due.map((p) => ({ ...p, publish_at_local: localTime(p.publish_at) })), null, 2));
   }
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
   /* `posted_at` (when the post went public on its platform; the
@@ -332,10 +354,10 @@ async function main() {
   if (cmd === 'clipboard') return console.log(clipboard());
   if (cmd === 'setup' || cmd === 'update') return console.log(require('./install.cjs').run([cmd]));
   if (cmd === 'skill') return console.log(require('./install.cjs').run(rest));
-  throw new Error('usage: srlink.cjs login | logout | status | share | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
+  throw new Error('usage: srlink.cjs login | logout | status | share | due | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
-module.exports = { api, authed, share, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
+module.exports = { api, authed, share, due, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
 
 if (require.main === module) {
   main().catch((err) => {

@@ -181,6 +181,31 @@ const SHARE_OUTCOME = {
 const outcomeOf = (r) => (r.existing ? (r.deleted ? 'deleted' : 'existing') : r.merged ? 'merged' : 'created');
 const shareNote = (r, s, url) => SHARE_OUTCOME[outcomeOf(r)](s, url, r);
 
+/* ------------------------------------------------------------
+ *  Scheduled posts that went out with a link still pending
+ *  (owner, 2026-11-17). The list is fetched at most every
+ *  DUE_REFRESH_MS; each post is mentioned at most once an hour, so
+ *  whichever session runs next fills the link.
+ * ------------------------------------------------------------ */
+const DUE_REFRESH_MS = 30 * 60_000;
+const DUE_REPEAT_MS = 60 * 60_000;
+
+async function dueNote(srlink, seen) {
+  let d = null;
+  try { d = JSON.parse(fs.readFileSync(srlink.DUE_FILE, 'utf8')); } catch { /* none yet */ }
+  if (!d || Date.now() - Date.parse(d.checked_at) > DUE_REFRESH_MS) d = await srlink.due().catch(() => d);
+  const slot = Math.floor(Date.now() / DUE_REPEAT_MS);
+  const items = (d?.due || []).filter((p) => !seen.includes(`due:${p.id}:${slot}`));
+  if (!items.length) return null;
+  saveSeen(srlink.DIR, [...seen, ...items.map((p) => `due:${p.id}:${slot}`)]);
+  const cli = path.join(__dirname, 'srlink.cjs');
+  const list = items.map((p) => `#${p.id} "${p.title}" on ${p.platforms.join(', ')} (went out ${srlink.localTime(p.publish_at)})`).join('; ');
+  return `SRlink: scheduled post(s) went out but have no link on SRlink yet: ${list}. ` +
+    'If you can drive the user\'s own logged-in browser, open their profile on that platform, find that post, copy its link, then run ' +
+    `node "${cli}" share --into <id> --title "<title>" --link <platform>=<url> (one per post). ` +
+    'If you cannot, tell the user in one line and ask them for the link.';
+}
+
 async function handle(event) {
   const srlink = require('./srlink.cjs');
   const cfg = srlink.loadConfig();
@@ -188,6 +213,12 @@ async function handle(event) {
    * Before the first login it stays silent instead of nagging. */
   if (cfg.autoShare === false) return null;
   if (!cfg.token && cfg.autoShare !== true) return null;
+  const due = cfg.token ? await dueNote(srlink, loadSeen(srlink.DIR)).catch(() => null) : null;
+  const note = await handlePosts(event, srlink, cfg);
+  return [due, note].filter(Boolean).join('\n') || null;
+}
+
+async function handlePosts(event, srlink, cfg) {
   const inputText = JSON.stringify(event.tool_input || {});
   /* Our own CLI prints links that are already on SRlink. */
   if (/srlink\.cjs|\/api\/srlink\//.test(inputText)) return null;
