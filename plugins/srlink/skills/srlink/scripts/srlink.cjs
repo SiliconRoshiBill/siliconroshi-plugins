@@ -32,6 +32,8 @@
 //    node srlink.cjs log [N]                     last N server requests (~/.srlink/logs)
 //    node srlink.cjs clipboard                   print the clipboard (macOS, Windows, Linux)
 //    node srlink.cjs setup | update              install the skill in every AI here (install.cjs)
+//    node srlink.cjs upgrade                     install the newest SRlink plugin now (upgrade.cjs)
+//    node srlink.cjs auto-upgrade on|off         daily check installs new versions (default on)
 //    node srlink.cjs skill [link <folder> | remove [--dry-run]]
 //
 //  Server: the one you logged in to (login --url ...), else SRLINK_URL,
@@ -337,6 +339,8 @@ async function main() {
   }
   if (cmd === 'due') return console.log(await dueCommand(f));
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
+  if (cmd === 'upgrade') return console.log(require('./upgrade.cjs').now());
+  if (cmd === 'auto-upgrade') return console.log(require('./upgrade.cjs').autoUpgrade(f._[0], { loadConfig, saveConfig }));
   /* `posted_at` (when the post went public on its platform; the
    * registration time when unknown) stays as the server sent it;
    * `posted_at_local` is for a human, in THEIR OWN timezone. */
@@ -362,7 +366,7 @@ async function main() {
   if (cmd === 'clipboard') return console.log(clipboard());
   if (cmd === 'setup' || cmd === 'update') return console.log(require('./install.cjs').run([cmd]));
   if (cmd === 'skill') return console.log(require('./install.cjs').run(rest));
-  throw new Error('usage: srlink.cjs login | logout | status | share | due | feed | mine | handles | observed | mark | auto-share | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
+  throw new Error('usage: srlink.cjs login | logout | status | share | due | feed | mine | handles | observed | mark | auto-share | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
 module.exports = { api, authed, share, due, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };

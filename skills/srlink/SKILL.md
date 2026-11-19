@@ -25,7 +25,7 @@ Read the reference named in the last column before the first command of that kin
 | "is it on SRlink?", something went wrong | `srlink mine`, then `srlink log 20` | [log](references/log.md) |
 | status | `srlink status` (login, auto-share, background check) and `srlink skill` (which AIs have it) | — |
 | install in Cursor / Copilot / WorkBuddy / Grok / another AI | `srlink setup`; for an AI not found: `srlink skill link <its skills folder>` | — |
-| update | `srlink update` (plugin installs: the plugin manager updates it) | — |
+| "upgrade SRlink", update | Claude Code plugin: `srlink upgrade`, then restart Claude Code. Other AIs: `srlink update`. A newer version is checked once a day and installed in the background (`srlink auto-upgrade off` turns that into a reminder) | — |
 | uninstall | `srlink skill remove --dry-run`, show it, then `srlink skill remove` once they agree; `srlink schedule off` and `srlink logout` only if they ask | — |
 
 After `srlink setup` or `srlink update`, show the report it prints to the user as is: no additions, no reordering.

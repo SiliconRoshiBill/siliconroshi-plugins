@@ -6,12 +6,14 @@
 //      there yet: find who wrote it under the post, then claim.
 //  At most one reminder every 6 hours, at most 10 items of each.
 //  Also turns the background check on for a logged-in user who never
-//  had it (sync.cjs ensureScheduled), and refreshes the skill copy
-//  other AIs link to (install.cjs). Silent when there is nothing.
+//  had it (sync.cjs ensureScheduled), refreshes the skill copy other
+//  AIs link to (install.cjs), and once a day looks for a newer SRlink
+//  (upgrade.cjs). Silent when there is nothing.
 // ============================================================
 
 const path = require('path');
-const { loadConfig, saveConfig, api, authed } = require('./srlink.cjs');
+const srlink = require('./srlink.cjs');
+const { loadConfig, saveConfig, api, authed } = srlink;
 
 const EVERY_MS = 6 * 3600 * 1000;
 const MAX = 10;
@@ -26,9 +28,10 @@ async function unmatchedForBrowser() {
 
 async function note() {
   try { require('./install.cjs').refresh(); } catch { /* other AIs keep the old copy */ }
-  if (!loadConfig().token) return null;
+  const upgrade = await require('./upgrade.cjs').check(srlink).catch(() => null);
+  if (!loadConfig().token) return upgrade;
   const scheduled = require('./sync.cjs').ensureScheduled();
-  const lines = [...(scheduled ? [`SRlink: ${scheduled} Tell the user in one line.`] : []), ...await reminders()];
+  const lines = [...(upgrade ? [upgrade] : []), ...(scheduled ? [`SRlink: ${scheduled} Tell the user in one line.`] : []), ...await reminders()];
   return lines.length ? lines.join('\n') : null;
 }
 
