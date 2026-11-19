@@ -21,6 +21,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const dueList = require('./due.cjs');
 
 const POST_PATTERNS = [
   ['youtube', /https?:\/\/(?:www\.)?(?:youtu\.be\/[\w-]{11}|youtube\.com\/(?:watch\?v=|shorts\/)[\w-]{11})/g],
@@ -185,7 +186,8 @@ const shareNote = (r, s, url) => SHARE_OUTCOME[outcomeOf(r)](s, url, r);
  *  Scheduled posts that went out with a link still pending
  *  (owner, 2026-11-17). The list is fetched at most every
  *  DUE_REFRESH_MS; each post is mentioned at most once an hour, so
- *  whichever session runs next fills the link.
+ *  whichever session runs next fills the link from the browser
+ *  (due.cjs, 2026-11-19). Posts marked --missing are left out.
  * ------------------------------------------------------------ */
 const DUE_REFRESH_MS = 30 * 60_000;
 const DUE_REPEAT_MS = 60 * 60_000;
@@ -195,15 +197,10 @@ async function dueNote(srlink, seen) {
   try { d = JSON.parse(fs.readFileSync(srlink.DUE_FILE, 'utf8')); } catch { /* none yet */ }
   if (!d || Date.now() - Date.parse(d.checked_at) > DUE_REFRESH_MS) d = await srlink.due().catch(() => d);
   const slot = Math.floor(Date.now() / DUE_REPEAT_MS);
-  const items = (d?.due || []).filter((p) => !seen.includes(`due:${p.id}:${slot}`));
+  const items = dueList.open(srlink.DIR, d?.due || []).filter((p) => !seen.includes(`due:${p.id}:${slot}`));
   if (!items.length) return null;
   saveSeen(srlink.DIR, [...seen, ...items.map((p) => `due:${p.id}:${slot}`)]);
-  const cli = path.join(__dirname, 'srlink.cjs');
-  const list = items.map((p) => `#${p.id} "${p.title}" on ${p.platforms.join(', ')} (went out ${srlink.localTime(p.publish_at)})`).join('; ');
-  return `SRlink: scheduled post(s) went out but have no link on SRlink yet: ${list}. ` +
-    'If you can drive the user\'s own logged-in browser, open their profile on that platform, find that post, copy its link, then run ' +
-    `node "${cli}" share --into <id> --title "<title>" --link <platform>=<url> (one per post). ` +
-    'If you cannot, tell the user in one line and ask them for the link.';
+  return dueList.hookNote(items, srlink.localTime);
 }
 
 async function handle(event) {

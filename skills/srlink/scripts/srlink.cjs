@@ -16,6 +16,8 @@
 //      timezone and converted to an absolute UTC instant before it
 //      is sent, so the server never re-interprets it as UTC.
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
+//    node srlink.cjs due [--steps | --missing <id>]
+//                                                scheduled posts still missing their link (due.cjs)
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME --tiktok @NAME --instagram NAME --reddit u/NAME]
@@ -225,6 +227,15 @@ async function due() {
   return out;
 }
 
+/* due | due --steps | due --missing <id> (due.cjs) */
+async function dueCommand(f) {
+  const list = require('./due.cjs');
+  if (f.missing) return list.markMissing(DIR, f.missing);
+  const items = list.open(DIR, (await due()).due);
+  if (f.steps) return list.allSteps(items, await handlesCached().catch(() => ({})), localTime);
+  return JSON.stringify(items.map((p) => ({ ...p, publish_at_local: localTime(p.publish_at) })), null, 2);
+}
+
 async function feed() {
   const r = await api('GET', '/api/srlink/feed', null, authed());
   if (!r.ok) throw new Error(`feed failed: ${r.status} ${r.data.error || ''}`);
@@ -324,10 +335,7 @@ async function main() {
     if (f.into) await due().catch(() => null);   /* the filled post leaves due.json now */
     return console.log(JSON.stringify(r));
   }
-  if (cmd === 'due') {
-    const d = await due();
-    return console.log(JSON.stringify(d.due.map((p) => ({ ...p, publish_at_local: localTime(p.publish_at) })), null, 2));
-  }
+  if (cmd === 'due') return console.log(await dueCommand(f));
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
   /* `posted_at` (when the post went public on its platform; the
    * registration time when unknown) stays as the server sent it;

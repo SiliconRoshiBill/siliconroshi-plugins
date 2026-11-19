@@ -18,7 +18,7 @@ Read the reference named in the last column before the first command of that kin
 | "log in to SRlink", set it up | `srlink login`, then `srlink handles ...` | [setup](references/setup.md) |
 | publish / post this to YouTube, Rednote, X ... | their own posting skill, or the built-in Chrome flow; then `srlink share` | [publish](references/publish.md) |
 | "share to SRlink", register a post | `srlink share --title ... --summary ... --publish-at ... --link <platform>=<url>`, then `srlink mine` | [publish](references/publish.md) |
-| scheduled a post on LinkedIn / X / Rednote / TikTok (no link yet) | `srlink share ... --publish-at <time> --link <platform>=pending`; when it is out, `srlink share --into <id> --link <platform>=<url>` (`srlink due` lists the ones waiting) | [publish](references/publish.md) |
+| scheduled a post on LinkedIn / X / Rednote / TikTok (no link yet) | `srlink share ... --publish-at <time> --link <platform>=pending`; when it is out, `srlink due --steps` and do what it says in the user's Chrome without asking them (it finds the link, then `share --into`; not there: `due --missing <id>`) | [publish](references/publish.md) |
 | SRfeed, comment on members' posts | `srlink feed` → user picks a draft → `srlink mark` | [feed](references/feed.md) |
 | "check comments", who supported me | `srlink mine` → read in Chrome → `srlink observed` | [feed](references/feed.md) |
 | sync my posts, background check, session scan | `srlink sync`, `srlink schedule`, `srlink scan`, `srlink match` | [automation](references/automation.md) |
