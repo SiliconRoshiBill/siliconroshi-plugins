@@ -69,6 +69,17 @@ function markMissing(dir, id) {
   return `#${id} will not be mentioned again. Tell the user in one line that it is not on the platform.`;
 }
 
+/* Rescheduled: it is coming, so it is not missing any more. */
+function clearMissing(dir, id) {
+  const { [id]: _, ...rest } = loadMissing(dir);
+  fs.writeFileSync(missingFile(dir), JSON.stringify(rest), { mode: 0o600 });
+}
+
+const SCHEDULED = {
+  linkedin: 'LinkedIn: on the feed click Start a post, then the clock icon, then View all scheduled posts',
+  x: 'X: https://x.com/compose/post/unsent/scheduled',
+};
+
 const open = (dir, items) => items.filter((p) => !loadMissing(dir)[p.id]);
 
 /* ------------------------------------------------------------
@@ -83,15 +94,16 @@ function steps(p, platform, handles, localTime) {
   const url = PROFILE[platform]?.(handles?.[platform]);
   const [from, to] = timeWindow(p.publish_at);
   const find = SCRIPT[platform]
-    ? `Run this in the page (javascript tool); it lists the user's posts with their real publish times:\n${SCRIPT[platform].replace(/^/gm, '     ')}\n   Pick the one with "at" between ${from} and ${to} whose text matches the summary.`
-    : `Find the user's post published between ${from} and ${to} whose text matches the summary, and copy its link.`;
+    ? `Run this in the page (javascript tool); it lists the user's posts with their real publish times:\n${SCRIPT[platform].replace(/^/gm, '     ')}\n   Pick the one with "at" between ${from} and ${to} whose text matches the summary. None there: a LATER one whose text matches (it went out late; the text may have been edited) is the one.`
+    : `Find the user's post published between ${from} and ${to} whose text matches the summary, or a later one that matches (it went out late), and copy its link.`;
   return [
     `#${p.id} "${p.title}" on ${platform}, due ${localTime(p.publish_at)}`,
     `   Summary: ${p.summary || '(none, match the title)'}`,
     `1. Open ${url || `the user's ${platform} profile`} in the user's own Chrome and let the posts load.`,
     `2. ${find}`,
-    `3. Found: node "${CLI}" share --into ${p.id} --title "${p.title.replace(/"/g, '\\"')}" --link ${platform}=<url>`,
-    `4. Not there, or a different post went out instead: node "${CLI}" due --missing ${p.id}`,
+    `3. Found: node "${CLI}" share --into ${p.id} --title "${p.title.replace(/"/g, '\\"')}" --publish-at <its "at"> --link ${platform}=<url>`,
+    `4. Not out yet: open the scheduled posts (${SCHEDULED[platform] || `the ${platform} scheduled-posts list`}). Still scheduled for a new time: node "${CLI}" reschedule ${p.id} --publish-at <that time>`,
+    `5. In neither place (cancelled, or a different post went out instead): node "${CLI}" due --missing ${p.id}`,
   ].join('\n');
 }
 
@@ -111,4 +123,4 @@ function hookNote(items, localTime) {
     'Only if no browser tool can be used here, tell the user in one line.';
 }
 
-module.exports = { PROFILE, SCRIPT, loadMissing, markMissing, open, timeWindow, steps, allSteps, hookNote };
+module.exports = { PROFILE, SCRIPT, SCHEDULED, loadMissing, markMissing, clearMissing, open, timeWindow, steps, allSteps, hookNote };

@@ -38,6 +38,8 @@ test('steps: profile page, the page script, the time window, both outcomes', () 
   assert.match(text, /Taste is the last 5%/);
   assert.match(text, /share --into 91 .*--link linkedin=<url>/);
   assert.match(text, /due --missing 91/);
+  assert.match(text, /a LATER one whose text matches/);
+  assert.match(text, /View all scheduled posts.*reschedule 91 --publish-at/);
   assert.match(due.steps({ ...POST, platforms: ['x'] }, 'x', { x: '@SiliconRoshi' }, (t) => t), /https:\/\/x\.com\/SiliconRoshi/);
 });
 
@@ -48,6 +50,8 @@ test('missing: a marked post drops out of the list and the hook', async () => {
   fs.writeFileSync(path.join(home, 'seen.json'), '[]');
   assert.equal(await handle(event), null);
   assert.throws(() => due.markMissing(home, 'x'), /usage/);
+  due.clearMissing(home, 91);                 /* rescheduled: it is coming after all */
+  assert.deepEqual(due.open(home, [POST]).map((p) => p.id), [91]);
 });
 
 test('page scripts: ids decode to the real publish time', () => {

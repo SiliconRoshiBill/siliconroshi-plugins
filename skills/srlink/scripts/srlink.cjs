@@ -18,6 +18,8 @@
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
 //    node srlink.cjs due [--steps | --missing <id>]
 //                                                scheduled posts still missing their link (due.cjs)
+//    node srlink.cjs reschedule <id> --publish-at WHEN
+//                                                a scheduled post moved: its card moves too
 //    node srlink.cjs feed
 //    node srlink.cjs mine                        my posts of the last 10 days (to monitor)
 //    node srlink.cjs handles [--rednote NAME --youtube @NAME --linkedin NAME --x NAME --tiktok @NAME --instagram NAME --reddit u/NAME]
@@ -229,6 +231,18 @@ async function due() {
   return out;
 }
 
+/* A scheduled post moved on its platform: the card moves with it,
+ * so nobody searches for it at the old time (owner, 2026-11-19). */
+async function reschedule(id, publishAt) {
+  const when = toAbsoluteISO(publishAt);
+  if (!/^\d+$/.test(String(id)) || !when) throw new Error('usage: reschedule <post id> --publish-at WHEN');
+  const r = await api('POST', `/api/srlink/posts/${id}/time`, { publish_at: when }, authed());
+  if (!r.ok) throw new Error(`reschedule failed: ${r.status} ${r.data.error || ''}`);
+  require('./due.cjs').clearMissing(DIR, id);
+  await due().catch(() => null);
+  return `#${id} ${Date.parse(when) > Date.now() ? 'now goes' : 'went'} public ${localTime(when)}.`;
+}
+
 /* due | due --steps | due --missing <id> (due.cjs) */
 async function dueCommand(f) {
   const list = require('./due.cjs');
@@ -338,6 +352,7 @@ async function main() {
     return console.log(JSON.stringify(r));
   }
   if (cmd === 'due') return console.log(await dueCommand(f));
+  if (cmd === 'reschedule') return console.log(await reschedule(f._[0], f['publish-at']));
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
   if (cmd === 'upgrade') return console.log(require('./upgrade.cjs').now());
   if (cmd === 'auto-upgrade') return console.log(require('./upgrade.cjs').autoUpgrade(f._[0], { loadConfig, saveConfig }));
@@ -366,7 +381,7 @@ async function main() {
   if (cmd === 'clipboard') return console.log(clipboard());
   if (cmd === 'setup' || cmd === 'update') return console.log(require('./install.cjs').run([cmd]));
   if (cmd === 'skill') return console.log(require('./install.cjs').run(rest));
-  throw new Error('usage: srlink.cjs login | logout | status | share | due | feed | mine | handles | observed | mark | auto-share | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
+  throw new Error('usage: srlink.cjs login | logout | status | share | due | reschedule | feed | mine | handles | observed | mark | auto-share | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
 module.exports = { api, authed, share, due, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };

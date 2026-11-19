@@ -271,7 +271,7 @@ async function handlePosts(event, srlink, cfg) {
     notes.push(
       `New post link(s): ${ask.map((p) => `${p.platform} ${p.url}`).join('; ')}. ` +
       'ONLY if the user just published this post themselves (not someone else\'s post you opened) AND it is public (never an unlisted or private video, such as a class recording), share it to SRlink. ' +
-      'A reply, or a quote post that answers someone else\'s post, is a comment, not a post: never share those. ' +
+      'A reply under someone else\'s post, or a quote post sent in a reply round, is a comment: never share those. A repost or quote post the user chose to publish with their own words on top IS their post: share it, summary from their own words. ' +
       'To share: ' +
       `node "${cli}" share --title "<the post title>" --summary "<3-5 sentences from the post's own text>" --publish-at <when it went or goes public> --link <platform>=<url>. ` +
       'Use the title you just published. Then tell the user in one line. Otherwise ignore this note.' +

@@ -1,6 +1,6 @@
 ---
 name: srlink
-description: SRlink, SiliconRoshi's member network, from any AI that loads skills (Claude Code, Codex, Gemini CLI, Cursor, Copilot, WorkBuddy, Grok and more). Log in once; publish posts to YouTube, Rednote, X, TikTok, Instagram and Reddit through the user's Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote / TikTok / Instagram / Reddit", "share to SRlink", "SRfeed", "check comments", "install SRlink in Cursor / another AI", or right after the user publishes a post anywhere.
+description: SRlink, SiliconRoshi's member network, from any AI that loads skills (Claude Code, Codex, Gemini CLI, Cursor, Copilot, WorkBuddy, Grok and more). Log in once; publish posts to YouTube, Rednote, X, TikTok, Instagram and Reddit through the user's Chrome (or let the user's own posting skill do it); register every published post on SRlink; read the SRfeed with AI comment drafts and help the user comment; monitor the user's own posts to verify who supported them. Use for "SRlink", "srpost", "post to YouTube / Rednote / TikTok / Instagram / Reddit", "share to SRlink", moving (rescheduling) or cancelling a scheduled post on any platform, "SRfeed", "check comments", "install SRlink in Cursor / another AI", or right after the user publishes a post anywhere.
 ---
 
 # SRlink
@@ -19,6 +19,7 @@ Read the reference named in the last column before the first command of that kin
 | publish / post this to YouTube, Rednote, X ... | their own posting skill, or the built-in Chrome flow; then `srlink share` | [publish](references/publish.md) |
 | "share to SRlink", register a post | `srlink share --title ... --summary ... --publish-at ... --link <platform>=<url>`, then `srlink mine` | [publish](references/publish.md) |
 | scheduled a post on LinkedIn / X / Rednote / TikTok (no link yet) | `srlink share ... --publish-at <time> --link <platform>=pending`; when it is out, `srlink due --steps` and do what it says in the user's Chrome without asking them (it finds the link, then `share --into`; not there: `due --missing <id>`) | [publish](references/publish.md) |
+| moved a scheduled post to a new time (you or any skill changed it on the platform, or the user says they did) | `srlink reschedule <id> --publish-at <new time>` in the same step; cancelled: `srlink due --missing <id>` | [publish](references/publish.md) |
 | SRfeed, comment on members' posts | `srlink feed` → user picks a draft → `srlink mark` | [feed](references/feed.md) |
 | "check comments", who supported me | `srlink mine` → read in Chrome → `srlink observed` | [feed](references/feed.md) |
 | sync my posts, background check, session scan | `srlink sync`, `srlink schedule`, `srlink scan`, `srlink match` | [automation](references/automation.md) |
