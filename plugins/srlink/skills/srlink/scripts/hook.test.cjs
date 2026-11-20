@@ -149,3 +149,17 @@ test('publishedNote: through the browser, fetch the link (Rednote: Copy Link); o
   assert.match(other, /Ask the user for the post's link/);
   assert.doesNotMatch(other, /get the link yourself/);
 });
+
+const { detectScheduled, scheduledNote } = require('./hook.cjs');
+
+test('detectScheduled: a scheduled post on its own page, through the browser only', () => {
+  const chrome = 'mcp__claude-in-chrome__computer';
+  assert.deepEqual(detectScheduled(chrome, '{"url":"https://www.linkedin.com/feed/"}', 'Post scheduled for Nov 23, 9:00 AM'), { platform: 'linkedin', scheduled: true });
+  assert.deepEqual(detectScheduled(chrome, '{}', 'https://x.com/home Your post will be sent on Mon, Nov 23 at 9:00 AM'), { platform: 'x', scheduled: true });
+  assert.equal(detectScheduled('Bash', '{}', 'https://x.com Your post was scheduled'), null);
+  assert.equal(detectScheduled(chrome, '{}', 'https://www.linkedin.com/feed/ Start a post'), null);
+  const note = scheduledNote({ platform: 'linkedin' }, '/x/srlink.cjs');
+  assert.match(note, /--link linkedin=pending/);
+  assert.match(note, /keep the card id/);
+  assert.match(note, /reschedule <id>/);
+});

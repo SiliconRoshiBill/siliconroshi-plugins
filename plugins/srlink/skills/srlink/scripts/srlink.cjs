@@ -16,7 +16,7 @@
 //      timezone and converted to an absolute UTC instant before it
 //      is sent, so the server never re-interprets it as UTC.
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
-//    node srlink.cjs due [--steps | --missing <id>]
+//    node srlink.cjs due [--steps | --upcoming | --missing <id>]
 //                                                scheduled posts still missing their link (due.cjs)
 //    node srlink.cjs reschedule <id> --publish-at WHEN
 //                                                a scheduled post moved: its card moves too
@@ -238,16 +238,38 @@ async function reschedule(id, publishAt) {
   if (!/^\d+$/.test(String(id)) || !when) throw new Error('usage: reschedule <post id> --publish-at WHEN');
   const r = await api('POST', `/api/srlink/posts/${id}/time`, { publish_at: when }, authed());
   if (!r.ok) throw new Error(`reschedule failed: ${r.status} ${r.data.error || ''}`);
-  require('./due.cjs').clearMissing(DIR, id);
   await due().catch(() => null);
   return `#${id} ${Date.parse(when) > Date.now() ? 'now goes' : 'went'} public ${localTime(when)}.`;
 }
 
-/* due | due --steps | due --missing <id> (due.cjs) */
+/* Shown when a scheduled post is registered: the id and the one
+ * command that keeps its card right if the post moves. */
+const pendingHint = (id) => `Card #${id} waits for this scheduled post. If its time changes, run: srlink reschedule ${id} --publish-at <new time>. Cancelled: srlink due --missing ${id}. ` +
+  'If the user schedules posts with their own skill, suggest adding that line to it once.';
+
+async function upcoming() {
+  const r = await api('GET', '/api/srlink/due?upcoming=1', null, authed());
+  if (!r.ok) throw new Error(`due failed: ${r.status} ${r.data.error || ''}`);
+  return r.data.due || [];
+}
+
+/* The user cancelled a scheduled post: its card (still without a
+ * link, so nobody has seen it) is deleted on SRlink, for every
+ * machine. Only such a card: never a post that is out. */
+async function cancel(id) {
+  const open = [...(await due()).due, ...(await upcoming())];
+  if (!open.some((p) => String(p.id) === String(id))) throw new Error(`#${id} is not a scheduled post still waiting for its link (see srlink due --upcoming)`);
+  const r = await api('DELETE', `/api/srlink/posts/${id}`, null, authed());
+  if (!r.ok) throw new Error(`cancel failed: ${r.status} ${r.data.error || ''}`);
+  await due().catch(() => null);
+  return `#${id} is cancelled and removed from SRlink. Tell the user in one line.`;
+}
+
+/* due | due --steps | due --upcoming | due --missing <id> (due.cjs) */
 async function dueCommand(f) {
   const list = require('./due.cjs');
-  if (f.missing) return list.markMissing(DIR, f.missing);
-  const items = list.open(DIR, (await due()).due);
+  if (f.missing) return cancel(f.missing);
+  const items = f.upcoming ? await upcoming() : (await due()).due;
   if (f.steps) return list.allSteps(items, await handlesCached().catch(() => ({})), localTime);
   return JSON.stringify(items.map((p) => ({ ...p, publish_at_local: localTime(p.publish_at) })), null, 2);
 }
@@ -349,6 +371,7 @@ async function main() {
     const links = f.link.map((s) => ({ platform: s.split('=')[0], url: s.slice(s.indexOf('=') + 1) }));
     const r = await share({ title: f.title, summary: f.summary, links, publishAt: f['publish-at'], into: f.into });
     if (f.into) await due().catch(() => null);   /* the filled post leaves due.json now */
+    if (r.id && links.some((l) => /^pending$/i.test(l.url))) r.next = pendingHint(r.id);
     return console.log(JSON.stringify(r));
   }
   if (cmd === 'due') return console.log(await dueCommand(f));
@@ -384,7 +407,7 @@ async function main() {
   throw new Error('usage: srlink.cjs login | logout | status | share | due | reschedule | feed | mine | handles | observed | mark | auto-share | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
-module.exports = { api, authed, share, due, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
+module.exports = { api, authed, share, due, pendingHint, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
 
 if (require.main === module) {
   main().catch((err) => {

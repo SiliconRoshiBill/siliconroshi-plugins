@@ -72,3 +72,11 @@ test('observed: only comments are reported, with their time when given', () => {
 test('mark liked: answered locally, nothing sent to the server', async () => {
   assert.deepEqual(await mark(7, 'liked', true), { ok: true, ignored: LIKES_OFF });
 });
+
+test('a scheduled share tells the AI the card id and the reschedule line', () => {
+  const { pendingHint } = require('./srlink.cjs');
+  const hint = pendingHint(96);
+  assert.match(hint, /Card #96/);
+  assert.match(hint, /srlink reschedule 96 --publish-at/);
+  assert.match(hint, /srlink due --missing 96/);
+});

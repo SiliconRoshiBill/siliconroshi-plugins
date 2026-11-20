@@ -34,24 +34,16 @@ test('steps: profile page, the page script, the time window, both outcomes', () 
   const text = due.steps(POST, 'linkedin', {}, (t) => t);
   assert.match(text, /linkedin\.com\/in\/me\/recent-activity\/all/);
   assert.match(text, /urn:li:activity/);
-  assert.match(text, /between 2026-11-18T14:45:00\.000Z and 2026-11-18T21:00:00\.000Z/);
+  assert.match(text, /between 2026-11-16T15:00:00\.000Z and /);         /* two days early, up to now */
+  assert.deepEqual(due.timeWindow('2026-11-18 15:00:00', Date.parse('2026-11-19T16:10:00Z')),
+    ['2026-11-16T15:00:00.000Z', '2026-11-19T16:10:00.000Z']);             /* the 11-19 incident: a day late is inside */
   assert.match(text, /Taste is the last 5%/);
   assert.match(text, /share --into 91 .*--link linkedin=<url>/);
   assert.match(text, /due --missing 91/);
-  assert.match(text, /a LATER one whose text matches/);
+  assert.match(text, /nearest the scheduled time/);
+  assert.match(text, /do nothing and mark nothing/);
   assert.match(text, /View all scheduled posts.*reschedule 91 --publish-at/);
   assert.match(due.steps({ ...POST, platforms: ['x'] }, 'x', { x: '@SiliconRoshi' }, (t) => t), /https:\/\/x\.com\/SiliconRoshi/);
-});
-
-test('missing: a marked post drops out of the list and the hook', async () => {
-  due.markMissing(home, 91);
-  assert.deepEqual(due.open(home, [POST, { ...POST, id: 92 }]).map((p) => p.id), [92]);
-  writeDue([POST]);
-  fs.writeFileSync(path.join(home, 'seen.json'), '[]');
-  assert.equal(await handle(event), null);
-  assert.throws(() => due.markMissing(home, 'x'), /usage/);
-  due.clearMissing(home, 91);                 /* rescheduled: it is coming after all */
-  assert.deepEqual(due.open(home, [POST]).map((p) => p.id), [91]);
 });
 
 test('page scripts: ids decode to the real publish time', () => {

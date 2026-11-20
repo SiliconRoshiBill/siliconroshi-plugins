@@ -141,6 +141,31 @@ const PUBLISHED = [
   ['x', /\b(?:x|twitter)\.com/, /Your post was sent|Your Tweet was sent/],
 ];
 const BROWSER_TOOL = /^mcp__.*(?:chrome|browser)/i;
+
+/* ------------------------------------------------------------
+ *  "Just scheduled" (owner, 2026-11-19). A scheduled post has no
+ *  link yet, so what can be kept now is its card: time and text.
+ *  Whatever skill scheduled it, the agent registers it as pending
+ *  and keeps the id, or moves the card if the time changed.
+ *  Browser pages only: the words are too common elsewhere.
+ * ------------------------------------------------------------ */
+const SCHEDULED_ON = [
+  ['rednote', /creator\.(?:xiaohongshu|rednote)\.com/, /定时发布成功|已设置定时发布/],
+  ['linkedin', /linkedin\.com/, /Post scheduled|(?:post|it) (?:is|was|has been) (?:re)?scheduled|scheduled for /i],
+  ['x', /\b(?:x|twitter)\.com/, /Your post (?:is|was|has been) scheduled|will be sent on/i],
+];
+
+function detectScheduled(toolName, inputText, outputText) {
+  if (!BROWSER_TOOL.test(toolName || '')) return null;
+  const hit = SCHEDULED_ON.find(([, host, done]) => host.test(inputText + outputText) && done.test(outputText));
+  return hit ? { platform: hit[0], scheduled: true } : null;
+}
+
+function scheduledNote(p, cli) {
+  return `SRlink: the page says the user just scheduled (or rescheduled) a post on ${p.platform}. It has no link until it goes out, so keep its card now. ` +
+    `No SRlink card for it yet: node "${cli}" share --title "<title>" --summary "<3-5 sentences from the post's own text>" --publish-at <the scheduled time> --link ${p.platform}=pending, and keep the card id from the reply. ` +
+    `Already has one (node "${cli}" due --upcoming) and the time changed: node "${cli}" reschedule <id> --publish-at <new time>. Tell the user in one line.`;
+}
 const PUBLISH_QUIET_MS = 10 * 60 * 1000;
 
 function detectPublished(toolName, inputText, outputText) {
@@ -197,7 +222,7 @@ async function dueNote(srlink, seen) {
   try { d = JSON.parse(fs.readFileSync(srlink.DUE_FILE, 'utf8')); } catch { /* none yet */ }
   if (!d || Date.now() - Date.parse(d.checked_at) > DUE_REFRESH_MS) d = await srlink.due().catch(() => d);
   const slot = Math.floor(Date.now() / DUE_REPEAT_MS);
-  const items = dueList.open(srlink.DIR, d?.due || []).filter((p) => !seen.includes(`due:${p.id}:${slot}`));
+  const items = (d?.due || []).filter((p) => !seen.includes(`due:${p.id}:${slot}`));
   if (!items.length) return null;
   saveSeen(srlink.DIR, [...seen, ...items.map((p) => `due:${p.id}:${slot}`)]);
   return dueList.hookNote(items, srlink.localTime);
@@ -217,18 +242,20 @@ async function handle(event) {
 
 async function handlePosts(event, srlink, cfg) {
   const inputText = JSON.stringify(event.tool_input || {});
-  /* Our own CLI prints links that are already on SRlink. */
-  if (/srlink\.cjs|\/api\/srlink\//.test(inputText)) return null;
+  /* Our own CLI prints links that are already on SRlink; reading
+   * SRlink's own source prints the very words the detectors look for. */
+  if (/srlink\.cjs|\/api\/srlink\/|skills\/srlink\//.test(inputText)) return null;
   const raw = JSON.stringify(event.tool_response || {}).replace(/\\\//g, '/');
   const outputText = withNamedFiles(raw.replace(/\\"/g, '"').replace(/\\n/g, '\n'));
   const seen = loadSeen(srlink.DIR);
   const posts = detectPosts(inputText, outputText, cfg.handles).filter((p) => !seen.includes(p.url));
   if (!posts.length) {
-    const p = cfg.token && detectPublished(event.tool_name, inputText, outputText);
-    const key = p && `published:${p.platform}:${Math.floor(Date.now() / PUBLISH_QUIET_MS)}`;
+    const p = cfg.token && (detectScheduled(event.tool_name, inputText, outputText) || detectPublished(event.tool_name, inputText, outputText));
+    const key = p && `${p.scheduled ? 'scheduled' : 'published'}:${p.platform}:${Math.floor(Date.now() / PUBLISH_QUIET_MS)}`;
     if (!p || seen.includes(key)) return null;
     saveSeen(srlink.DIR, [...seen, key]);
-    return publishedNote(p, path.join(__dirname, 'srlink.cjs'));
+    const cli = path.join(__dirname, 'srlink.cjs');
+    return p.scheduled ? scheduledNote(p, cli) : publishedNote(p, cli);
   }
   if (!cfg.token) {
     saveSeen(srlink.DIR, [...seen, ...posts.map((p) => p.url)]);
@@ -283,7 +310,7 @@ async function handlePosts(event, srlink, cfg) {
   return notes.join('\n');
 }
 
-module.exports = { detectPosts, detectPublished, publishedNote, recordFor, withNamedFiles, namedJsonFiles, handle, shareNote, POST_PATTERNS };
+module.exports = { detectPosts, detectPublished, publishedNote, detectScheduled, scheduledNote, recordFor, withNamedFiles, namedJsonFiles, handle, shareNote, POST_PATTERNS };
 
 if (require.main === module) {
   let raw = '';

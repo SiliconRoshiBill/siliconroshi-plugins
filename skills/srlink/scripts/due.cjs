@@ -5,20 +5,22 @@
 //
 //    node srlink.cjs due                 the list, as JSON
 //    node srlink.cjs due --steps         what the AI does for each one
-//    node srlink.cjs due --missing <id>  it is not on the platform:
-//                                        stop reminding about it
+//    node srlink.cjs due --upcoming      scheduled ones not out yet (ids)
+//    node srlink.cjs due --missing <id>  the user cancelled it: the card
+//                                        is deleted on SRlink
 //
 //  LinkedIn and X post ids carry their publish time, so the page
 //  script below lists the user's posts with exact times; the AI
-//  picks the one in the time window whose text matches the summary.
+//  picks the one whose text matches the summary, nearest the
+//  scheduled time. Not found: nothing is marked; the next hour
+//  looks again, and the server stops listing it after 3 days
+//  (owner, 2026-11-19).
 // ============================================================
 
-const fs = require('fs');
 const path = require('path');
 
 const CLI = path.join(__dirname, 'srlink.cjs');
-const BEFORE_MS = 15 * 60_000;            /* platforms post a little early or late */
-const AFTER_MS = 6 * 3600_000;
+const BEFORE_MS = 2 * 86400_000;         /* it may go out early, even a day or two */
 
 /* ------------------------------------------------------------
  *  Where the user's own posts are listed, newest first
@@ -53,49 +55,27 @@ const SCRIPT = {
 }).filter(Boolean)`,
 };
 
-/* ------------------------------------------------------------
- *  "Not on the platform" marks, kept in ~/.srlink/due-missing.json
- * ------------------------------------------------------------ */
-const missingFile = (dir) => path.join(dir, 'due-missing.json');
-
-function loadMissing(dir) {
-  try { return JSON.parse(fs.readFileSync(missingFile(dir), 'utf8')); } catch { return {}; }
-}
-
-function markMissing(dir, id) {
-  if (!/^\d+$/.test(String(id))) throw new Error('usage: due --missing <post id>');
-  const marks = { ...loadMissing(dir), [id]: new Date().toISOString() };
-  fs.writeFileSync(missingFile(dir), JSON.stringify(marks), { mode: 0o600 });
-  return `#${id} will not be mentioned again. Tell the user in one line that it is not on the platform.`;
-}
-
-/* Rescheduled: it is coming, so it is not missing any more. */
-function clearMissing(dir, id) {
-  const { [id]: _, ...rest } = loadMissing(dir);
-  fs.writeFileSync(missingFile(dir), JSON.stringify(rest), { mode: 0o600 });
-}
-
 const SCHEDULED = {
   linkedin: 'LinkedIn: on the feed click Start a post, then the clock icon, then View all scheduled posts',
   x: 'X: https://x.com/compose/post/unsent/scheduled',
 };
 
-const open = (dir, items) => items.filter((p) => !loadMissing(dir)[p.id]);
-
 /* ------------------------------------------------------------
  *  The recipe for one post on one platform
  * ------------------------------------------------------------ */
-function timeWindow(publishAt) {
+/* From two days before the scheduled time up to now: early, on
+ * time or late, it is in there once it is out. */
+function timeWindow(publishAt, now = Date.now()) {
   const t = Date.parse(String(publishAt).replace(' ', 'T') + (/Z|[+-]\d\d:?\d\d$/.test(publishAt) ? '' : 'Z'));
-  return [new Date(t - BEFORE_MS).toISOString(), new Date(t + AFTER_MS).toISOString()];
+  return [new Date(t - BEFORE_MS).toISOString(), new Date(now).toISOString()];
 }
 
 function steps(p, platform, handles, localTime) {
   const url = PROFILE[platform]?.(handles?.[platform]);
   const [from, to] = timeWindow(p.publish_at);
   const find = SCRIPT[platform]
-    ? `Run this in the page (javascript tool); it lists the user's posts with their real publish times:\n${SCRIPT[platform].replace(/^/gm, '     ')}\n   Pick the one with "at" between ${from} and ${to} whose text matches the summary. None there: a LATER one whose text matches (it went out late; the text may have been edited) is the one.`
-    : `Find the user's post published between ${from} and ${to} whose text matches the summary, or a later one that matches (it went out late), and copy its link.`;
+    ? `Run this in the page (javascript tool); it lists the user's posts with their real publish times:\n${SCRIPT[platform].replace(/^/gm, '     ')}\n   Pick the one with "at" between ${from} and ${to} whose text matches the summary (it may have been edited); if several match, the one nearest the scheduled time.`
+    : `Find the user's post published between ${from} and ${to} whose text matches the summary (nearest the scheduled time if several), and copy its link and publish time.`;
   return [
     `#${p.id} "${p.title}" on ${platform}, due ${localTime(p.publish_at)}`,
     `   Summary: ${p.summary || '(none, match the title)'}`,
@@ -103,7 +83,7 @@ function steps(p, platform, handles, localTime) {
     `2. ${find}`,
     `3. Found: node "${CLI}" share --into ${p.id} --title "${p.title.replace(/"/g, '\\"')}" --publish-at <its "at"> --link ${platform}=<url>`,
     `4. Not out yet: open the scheduled posts (${SCHEDULED[platform] || `the ${platform} scheduled-posts list`}). Still scheduled for a new time: node "${CLI}" reschedule ${p.id} --publish-at <that time>`,
-    `5. In neither place (cancelled, or a different post went out instead): node "${CLI}" due --missing ${p.id}`,
+    `5. Not found anywhere: do nothing and mark nothing. It is looked for again next hour, and it drops off by itself after 3 days. Only if the user says they cancelled it: node "${CLI}" due --missing ${p.id}`,
   ].join('\n');
 }
 
@@ -117,10 +97,10 @@ function allSteps(items, handles, localTime) {
  *  Hook note: short, points at --steps
  * ------------------------------------------------------------ */
 function hookNote(items, localTime) {
-  const list = items.map((p) => `#${p.id} "${p.title}" on ${p.platforms.join(', ')} (went out ${localTime(p.publish_at)})`).join('; ');
-  return `SRlink: scheduled post(s) went out but have no link on SRlink yet: ${list}. ` +
+  const list = items.map((p) => `#${p.id} "${p.title}" on ${p.platforms.join(', ')} (scheduled ${localTime(p.publish_at)})`).join('; ');
+  return `SRlink: scheduled time passed but no link on SRlink yet: ${list}. ` +
     `Fill them now from the user's own browser, without asking the user: run node "${CLI}" due --steps and follow it. ` +
     'Only if no browser tool can be used here, tell the user in one line.';
 }
 
-module.exports = { PROFILE, SCRIPT, SCHEDULED, loadMissing, markMissing, clearMissing, open, timeWindow, steps, allSteps, hookNote };
+module.exports = { PROFILE, SCRIPT, SCHEDULED, timeWindow, steps, allSteps, hookNote };
