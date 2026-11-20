@@ -52,3 +52,15 @@ test('page scripts: ids decode to the real publish time', () => {
   assert.match(due.SCRIPT.linkedin, />> 22n/);
   assert.match(due.SCRIPT.x, /1288834974657n/);
 });
+
+test('auto-fill: hourly for 6 hours after the time, then every 6 hours; only Chrome and this CLI', () => {
+  const now = Date.parse('2026-11-19T20:00:00Z');
+  const fresh = { id: 1, publish_at: '2026-11-19 17:00:00' }, late = { id: 2, publish_at: '2026-11-18 15:00:00' };
+  assert.deepEqual(due.toTry([fresh, late], { 1: now - 60_000, 2: now - 3600_000 }, now).map((p) => p.id), [1]);
+  assert.deepEqual(due.toTry([late], { 2: now - 7 * 3600_000 }, now).map((p) => p.id), [2]);
+  const args = due.claudeArgs();
+  assert.ok(args.includes('--chrome') && args.includes('--permission-prompts'));
+  assert.equal(args[args.indexOf('--permission-prompts') + 1], 'none');
+  assert.ok(args.some((a) => /^Bash\(node .*srlink\.cjs:\*\)$/.test(a)));
+  assert.ok(!args.includes('Bash') && !args.includes('Write'));
+});

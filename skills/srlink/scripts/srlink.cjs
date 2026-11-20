@@ -16,6 +16,7 @@
 //      timezone and converted to an absolute UTC instant before it
 //      is sent, so the server never re-interprets it as UTC.
 //    node srlink.cjs auto-share on|off            plugin hook registers my new posts (default on)
+//    node srlink.cjs auto-fill on|off             hourly check fetches due links via headless Claude (default on)
 //    node srlink.cjs due [--steps | --upcoming | --missing <id>]
 //                                                scheduled posts still missing their link (due.cjs)
 //    node srlink.cjs reschedule <id> --publish-at WHEN
@@ -198,7 +199,7 @@ async function status() {
   const r = await api('GET', '/api/srlink/feed', null, cfg.token);
   if (r.status === 401) return 'Token no longer valid. Run login again.';
   const hours = require('./sync.cjs').scheduledHours();
-  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === false ? 'off' : 'on'}; background check ${hours ? (hours === 1 ? 'every hour' : `every ${hours} hours`) : 'off'}; session scan ${cfg.scanSessions ? 'on' : 'off'}.`;
+  return `Logged in to ${cfg.base} as a ${r.data.member ? 'member' : 'user'}; ${r.data.posts?.length ?? 0} posts in SRfeed; auto-share ${cfg.autoShare === false ? 'off' : 'on'}; auto-fill ${cfg.autoFill === false ? 'off' : 'on'}; background check ${hours ? (hours === 1 ? 'every hour' : `every ${hours} hours`) : 'off'}; session scan ${cfg.scanSessions ? 'on' : 'off'}.`;
 }
 
 /* links: [{ platform, url }]; platform names may be aliases (rednote, twitter...).
@@ -340,6 +341,15 @@ async function mark(postId, action, on, text) {
   return r.data;
 }
 
+/* The hourly check starts a headless Claude to fetch due links. */
+function autoFill(mode) {
+  if (mode !== 'on' && mode !== 'off') {
+    return `Auto-fill is ${loadConfig().autoFill === false ? 'off' : 'on'}. Use: auto-fill on|off`;
+  }
+  saveConfig({ ...loadConfig(), autoFill: mode === 'on' });
+  return `Auto-fill ${mode}.`;
+}
+
 /* The plugin hook stays silent unless this is on. */
 function autoShare(mode) {
   if (mode !== 'on' && mode !== 'off') {
@@ -377,6 +387,7 @@ async function main() {
   if (cmd === 'due') return console.log(await dueCommand(f));
   if (cmd === 'reschedule') return console.log(await reschedule(f._[0], f['publish-at']));
   if (cmd === 'auto-share') return console.log(autoShare(f._[0]));
+  if (cmd === 'auto-fill') return console.log(autoFill(f._[0]));
   if (cmd === 'upgrade') return console.log(require('./upgrade.cjs').now());
   if (cmd === 'auto-upgrade') return console.log(require('./upgrade.cjs').autoUpgrade(f._[0], { loadConfig, saveConfig }));
   /* `posted_at` (when the post went public on its platform; the
@@ -404,7 +415,7 @@ async function main() {
   if (cmd === 'clipboard') return console.log(clipboard());
   if (cmd === 'setup' || cmd === 'update') return console.log(require('./install.cjs').run([cmd]));
   if (cmd === 'skill') return console.log(require('./install.cjs').run(rest));
-  throw new Error('usage: srlink.cjs login | logout | status | share | due | reschedule | feed | mine | handles | observed | mark | auto-share | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
+  throw new Error('usage: srlink.cjs login | logout | status | share | due | reschedule | feed | mine | handles | observed | mark | auto-share | auto-fill | upgrade | auto-upgrade | sync | schedule | scan | match | claim | log | clipboard | setup | update | skill');
 }
 
 module.exports = { api, authed, share, due, pendingHint, DUE_FILE, feed, known, handles, handlesCached, platformKey, loadConfig, saveConfig, DIR, toISO, localTime, toAbsoluteISO, commentItems, flags, mark, LIKES_OFF };
