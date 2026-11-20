@@ -257,15 +257,6 @@ async function run(argv) {
       process.exitCode = 1;
     }
   }
-  /* Scheduled posts whose time passed: a headless Claude fetches
-   * their links in the user's Chrome (due.cjs autoFill). */
-  try {
-    const f = await require('./due.cjs').autoFill();
-    if (f) console.log(`${stamp()} ${f}`);
-  } catch (e) {
-    console.error(`${stamp()} auto-fill failed: ${e.message}`);
-    process.exitCode = 1;
-  }
   try {
     await require('./match.cjs').run(['--quiet']);
   } catch (e) {

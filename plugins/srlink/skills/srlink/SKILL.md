@@ -22,7 +22,7 @@ Read the reference named in the last column before the first command of that kin
 | moved a scheduled post to a new time (you or any skill changed it on the platform, or the user says they did) | `srlink reschedule <id> --publish-at <new time>` in the same step (ids: `srlink due --upcoming`); the user cancelled it: `srlink due --missing <id>` | [publish](references/publish.md) |
 | SRfeed, comment on members' posts | `srlink feed` → user picks a draft → `srlink mark` | [feed](references/feed.md) |
 | "check comments", who supported me | `srlink mine` → read in Chrome → `srlink observed` | [feed](references/feed.md) |
-| sync my posts, background check, session scan, auto-fill of scheduled posts' links | `srlink sync`, `srlink schedule`, `srlink scan`, `srlink match`, `srlink auto-fill on\|off` | [automation](references/automation.md) |
+| sync my posts, background check, session scan | `srlink sync`, `srlink schedule`, `srlink scan`, `srlink match` | [automation](references/automation.md) |
 | "is it on SRlink?", something went wrong | `srlink mine`, then `srlink log 20` | [log](references/log.md) |
 | status | `srlink status` (login, auto-share, background check) and `srlink skill` (which AIs have it) | — |
 | install in Cursor / Copilot / WorkBuddy / Grok / another AI | `srlink setup`; for an AI not found: `srlink skill link <its skills folder>` | — |
